@@ -9,6 +9,21 @@ ColorScheme buildLightScheme({Color seed = kBrandSeed}) =>
 ColorScheme buildDarkScheme({Color seed = kBrandSeed}) =>
     ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark);
 
+const List<Color> kProfileColors = <Color>[
+  Color(0xFFEF4444), // red
+  Color(0xFFF97316), // orange
+  Color(0xFFF59E0B), // amber
+  Color(0xFF10B981), // emerald
+  Color(0xFF22C55E), // green
+  Color(0xFF06B6D4), // cyan
+  Color(0xFF0EA5E9), // sky
+  Color(0xFF3B82F6), // blue
+  Color(0xFF6366F1), // indigo
+  Color(0xFFA855F7), // purple
+  Color(0xFFEC4899), // pink
+  Color(0xFF14B8A6), // teal
+];
+
 /// If later you want full manual control, you can provide fixed schemes here:
 // const ColorScheme kLightScheme = ColorScheme(
 //   brightness: Brightness.light,

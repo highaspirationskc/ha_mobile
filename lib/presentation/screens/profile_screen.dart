@@ -1,44 +1,60 @@
+// lib/presentation/screens/profile_screen.dart
 import 'package:flutter/material.dart';
-import '../../core/theme/theme_controller.dart';
+import '../../data/mock/mock_data.dart';
+import '../widgets/avatar.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String? _imagePath; // local file path or URL (from picker)
+  int? _colorIndex; // chosen profile color
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = ThemeScope.read(context); // non-listening here
-    final current = ThemeScope.of(context).mode; // listening for rebuild
+    final u = mockUser;
 
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          SegmentedButton<ThemeMode>(
-            segments: const [
-              ButtonSegment(
-                value: ThemeMode.system,
-                label: Text('System'),
-                icon: Icon(Icons.brightness_auto),
+      children: [
+        Row(
+          children: [
+            Avatar(
+              firstName: u.firstName,
+              lastName: u.lastName,
+              image: _imagePath ?? u.image, // use picked image or mock default
+              colorIndex: _colorIndex,
+              editable: true,
+              onImageChanged: (path) => setState(() => _imagePath = path),
+              onColorChanged: (i) => setState(() => _colorIndex = i),
+              size: 96,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    u.fullName,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    u.email,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-              ButtonSegment(
-                value: ThemeMode.light,
-                label: Text('Light'),
-                icon: Icon(Icons.light_mode),
-              ),
-              ButtonSegment(
-                value: ThemeMode.dark,
-                label: Text('Dark'),
-                icon: Icon(Icons.dark_mode),
-              ),
-            ],
-            selected: {current},
-            onSelectionChanged: (s) => ctrl.setMode(s.first),
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const Text('Other profile settings coming soon…'),
+      ],
     );
   }
 }
