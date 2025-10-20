@@ -4,6 +4,7 @@ class AppRoutes {
   static const profileRoot = '/';
 
   static const eventDetail = '/event';
-  static const calendar = '/calendar'; // <-- add this
+  static const calendar = '/calendar';
   static const notificationMessage = '/message';
+  static const scoopDetail = '/scoop';
 }

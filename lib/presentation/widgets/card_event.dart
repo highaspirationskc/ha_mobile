@@ -3,12 +3,20 @@ import 'package:flutter/material.dart';
 import '../../business/events/entities/event.dart';
 import '../../business/user/entities/user.dart';
 import 'avatar_mini.dart';
+import 'button_round_small.dart';
+import '../../core/utils/date_formatters.dart';
 
 class EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback? onTap;
+  final VoidCallback? onRegister; // NEW
 
-  const EventCard({super.key, required this.event, this.onTap});
+  const EventCard({
+    super.key,
+    required this.event,
+    this.onTap,
+    this.onRegister,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,8 +24,9 @@ class EventCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
-      elevation: 0,
+      elevation: 1,
       clipBehavior: Clip.antiAlias,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: cs.outlineVariant),
@@ -36,7 +45,7 @@ class EventCard extends StatelessWidget {
 
             // Title
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4), // trimmed
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 event.name,
                 style: textTheme.titleMedium?.copyWith(
@@ -49,18 +58,14 @@ class EventCard extends StatelessWidget {
 
             // Date/Time + Location row
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6), // trimmed
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 18,
-                    color: cs.primary,
-                  ),
+                  Icon(Icons.calendar_today, size: 18, color: cs.primary),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
-                      _formatDateTime(event.dateTime),
+                      formatCardDateTime(event.dateTime), // "Oct 25th, 5:00 PM"
                       style: textTheme.bodyMedium?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -68,7 +73,7 @@ class EventCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Icon(Icons.place_outlined, size: 18, color: cs.primary),
+                  Icon(Icons.place, size: 18, color: cs.primary),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -83,27 +88,44 @@ class EventCard extends StatelessWidget {
               ),
             ),
 
-            // Attending row (avatars first, label trailing)
+            // Attending + Register row
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10), // trimmed
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
               child: Row(
                 children: [
-                  if (event.attendeeCount > 0) ...[
-                    _AttendeesRow(users: event.attendees),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Attending',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  // LEFT: avatars + label (hug content)
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (event.attendeeCount > 0) ...[
+                          _AttendeesRow(users: event.attendees),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Attending',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ] else
+                          Text(
+                            'Be the first to register',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ),
-                  ] else
-                    Text(
-                      'Be the first to register',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
+                  ),
+
+                  // RIGHT: register button
+                  ButtonRoundSmall(
+                    label: 'Register',
+                    // onPressed: onRegister,
+                    onPressed: () => print('Register'),
+                    tonal: false, // primary by default
+                    minHeight: 32,
+                  ),
                 ],
               ),
             ),
@@ -111,42 +133,6 @@ class EventCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatDateTime(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    String ordinal(int n) {
-      if (n >= 11 && n <= 13) return '${n}th';
-      switch (n % 10) {
-        case 1:
-          return '${n}st';
-        case 2:
-          return '${n}nd';
-        case 3:
-          return '${n}rd';
-        default:
-          return '${n}th';
-      }
-    }
-
-    final date = '${months[dt.month - 1]} ${ordinal(dt.day)}';
-    final h12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final m = dt.minute.toString().padLeft(2, '0');
-    final ampm = dt.hour < 12 ? 'AM' : 'PM';
-    return '$date, $h12:$m $ampm';
   }
 }
 
@@ -183,6 +169,7 @@ class _EventImage extends StatelessWidget {
   }
 }
 
+// Overlapped avatars width is tight so the label can sit close
 class _AttendeesRow extends StatelessWidget {
   final List<User> users;
   const _AttendeesRow({required this.users});
@@ -196,18 +183,12 @@ class _AttendeesRow extends StatelessWidget {
     final visible = users.take(maxFaces).toList();
     final extra = users.length - visible.length;
 
-    // Effective step between faces accounting for overlap
-    const step = faceSize + overlap; // 18.0 with values above
+    const step = faceSize + overlap; // effective spacing
 
-    // Compute total width of the overlapped cluster
     final facesWidth = visible.isEmpty
         ? 0.0
         : faceSize + (visible.length - 1) * step;
-
-    final extraWidth = extra > 0
-        ? step
-        : 0.0; // "+N" bubble sits like another face
-
+    final extraWidth = extra > 0 ? step : 0.0;
     final totalWidth = facesWidth + extraWidth;
 
     return SizedBox(
@@ -219,18 +200,16 @@ class _AttendeesRow extends StatelessWidget {
           for (int i = 0; i < visible.length; i++)
             Positioned(
               left: i * step,
-              top: 0,
               child: AvatarMini(
                 firstName: visible[i].firstName,
                 lastName: visible[i].lastName,
-                image: visible[i].image, // '' => initials fallback
+                image: visible[i].image,
                 size: faceSize,
               ),
             ),
           if (extra > 0)
             Positioned(
               left: visible.length * step,
-              top: 0,
               child: _ExtraCountCircle(count: extra, size: faceSize),
             ),
         ],
@@ -252,19 +231,19 @@ class _ExtraCountCircle extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: cs.surfaceVariant,
+        color: cs.primary,
         shape: BoxShape.circle,
         border: Border.all(
-          color: Theme.of(context).colorScheme.surface,
+          color: Colors.white,
           width: 2,
-        ),
+        ), // match avatar border
       ),
       child: Text(
         '+$count',
         style: TextStyle(
           fontSize: size * 0.42,
           fontWeight: FontWeight.w700,
-          color: cs.onSurfaceVariant,
+          color: cs.surface,
         ),
       ),
     );

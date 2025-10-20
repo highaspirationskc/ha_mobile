@@ -1,15 +1,23 @@
 // lib/presentation/screens/root_shell.dart
 import 'package:flutter/material.dart';
-import 'package:ha_mobile/business/events/entities/event.dart';
+
 import '../../core/routes.dart';
+import '../widgets/ha_app_bar.dart';
+import '../widgets/ha_nav_bar.dart';
+import '../widgets/bottom_cta.dart';
+
+// Screens (body-only)
 import 'home_screen.dart';
 import 'notifications_screen.dart';
 import 'message_screen.dart';
 import 'profile_screen.dart';
-import '../widgets/ha_app_bar.dart';
-import '../widgets/ha_nav_bar.dart';
 import 'event_detail_screen.dart';
 import 'calendar_screen.dart';
+import 'scoop_detail_screen.dart';
+
+// Entities
+import '../../business/events/entities/event.dart';
+import '../../business/scoops/entities/scoop.dart';
 
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
@@ -17,67 +25,53 @@ class RootShell extends StatefulWidget {
   State<RootShell> createState() => _RootShellState();
 }
 
-/// Observes a tab's Navigator and reports the active route.
-class _TabObserver extends NavigatorObserver {
-  final void Function(Route<dynamic>?, Route<dynamic>?) onChanged;
-  _TabObserver(this.onChanged);
-
-  @override
-  void didPush(Route route, Route? previousRoute) =>
-      onChanged(route, previousRoute);
-  @override
-  void didPop(Route route, Route? previousRoute) =>
-      onChanged(previousRoute, route);
-  @override
-  void didReplace({Route? newRoute, Route? oldRoute}) =>
-      onChanged(newRoute, oldRoute);
-}
-
 class _RootShellState extends State<RootShell> {
   int _index = 0;
 
-  // One Navigator per tab
+  // One stable GlobalKey per tab Navigator
   final _homeKey = GlobalKey<NavigatorState>();
   final _notiKey = GlobalKey<NavigatorState>();
   final _profileKey = GlobalKey<NavigatorState>();
 
-  // Track current route per tab for dynamic titles / back button
+  // Track top route per tab
   String _homeRoute = AppRoutes.homeRoot;
   String _notiRoute = AppRoutes.notificationsRoot;
   String _profileRoute = AppRoutes.profileRoot;
 
-  // Observers update the route trackers above (deferred to avoid setState during build)
-  late final _homeObserver = _TabObserver((newR, _) {
+  // ---- Post-frame rebuild (always deferred) ----
+  bool _pendingRebuild = false;
+  void _requestRebuild() {
+    if (!mounted || _pendingRebuild) return;
+    _pendingRebuild = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted)
-        setState(() => _homeRoute = newR?.settings.name ?? AppRoutes.homeRoot);
+      if (!mounted) return;
+      _pendingRebuild = false;
+      setState(() {});
     });
+  }
+
+  late final _homeObserver = _TabObserver((r, _) {
+    _homeRoute = r?.settings.name ?? AppRoutes.homeRoot;
+    _requestRebuild(); // deferred
   });
-  late final _notiObserver = _TabObserver((newR, _) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted)
-        setState(
-          () => _notiRoute = newR?.settings.name ?? AppRoutes.notificationsRoot,
-        );
-    });
+  late final _notiObserver = _TabObserver((r, _) {
+    _notiRoute = r?.settings.name ?? AppRoutes.notificationsRoot;
+    _requestRebuild(); // deferred
   });
-  late final _profileObserver = _TabObserver((newR, _) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted)
-        setState(
-          () => _profileRoute = newR?.settings.name ?? AppRoutes.profileRoot,
-        );
-    });
+  late final _profileObserver = _TabObserver((r, _) {
+    _profileRoute = r?.settings.name ?? AppRoutes.profileRoot;
+    _requestRebuild(); // deferred
   });
 
-  // Tab configs
-  late final _tabs = <_Tab>[
+  // Build tab descriptors once (stable)
+  late final List<_Tab> _tabs = <_Tab>[
     _Tab(
       label: 'Home',
       icon: const Icon(Icons.home_outlined),
       selectedIcon: const Icon(Icons.home),
       key: _homeKey,
       observers: [_homeObserver],
+      rootName: AppRoutes.homeRoot,
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case AppRoutes.eventDetail:
@@ -91,6 +85,12 @@ class _RootShellState extends State<RootShell> {
               builder: (_) => const CalendarScreen(),
               settings: const RouteSettings(name: AppRoutes.calendar),
             );
+          case AppRoutes.scoopDetail:
+            final scoop = settings.arguments as Scoop;
+            return MaterialPageRoute(
+              builder: (_) => ScoopDetailScreen(scoop: scoop),
+              settings: const RouteSettings(name: AppRoutes.scoopDetail),
+            );
           case AppRoutes.homeRoot:
           default:
             return MaterialPageRoute(
@@ -99,25 +99,26 @@ class _RootShellState extends State<RootShell> {
             );
         }
       },
-      titleForRoute: (routeName) => switch (routeName) {
+      titleForRoute: (name) => switch (name) {
         AppRoutes.eventDetail => 'Event',
         AppRoutes.calendar => 'Calendar',
+        AppRoutes.scoopDetail => 'Saturday Scoop',
         _ => 'High Aspirations',
       },
     ),
-
     _Tab(
       label: 'Notifications',
       icon: const Icon(Icons.notifications_none),
       selectedIcon: const Icon(Icons.notifications),
       key: _notiKey,
       observers: [_notiObserver],
+      rootName: AppRoutes.notificationsRoot,
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case AppRoutes.notificationMessage:
             final id = settings.arguments as String?;
             return MaterialPageRoute(
-              builder: (_) => MessageScreen(messageId: id), // body-only
+              builder: (_) => MessageScreen(messageId: id),
               settings: const RouteSettings(
                 name: AppRoutes.notificationMessage,
               ),
@@ -125,12 +126,12 @@ class _RootShellState extends State<RootShell> {
           case AppRoutes.notificationsRoot:
           default:
             return MaterialPageRoute(
-              builder: (_) => const NotificationsScreen(), // body-only
+              builder: (_) => const NotificationsScreen(),
               settings: const RouteSettings(name: AppRoutes.notificationsRoot),
             );
         }
       },
-      titleForRoute: (routeName) => switch (routeName) {
+      titleForRoute: (name) => switch (name) {
         AppRoutes.notificationMessage => 'Message',
         _ => 'Notifications',
       },
@@ -141,33 +142,64 @@ class _RootShellState extends State<RootShell> {
       selectedIcon: const Icon(Icons.person),
       key: _profileKey,
       observers: [_profileObserver],
-      onGenerateRoute: (_) => MaterialPageRoute(
-        builder: (_) => const ProfileScreen(), // body-only
-        settings: const RouteSettings(name: AppRoutes.profileRoot),
-      ),
+      rootName: AppRoutes.profileRoot,
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (_) => const ProfileScreen(),
+          settings: const RouteSettings(name: AppRoutes.profileRoot),
+        );
+      },
       titleForRoute: (_) => 'Profile',
     ),
   ];
 
-  // Convenience getters for current tab
-  GlobalKey<NavigatorState> get _currentKey =>
-      [_homeKey, _notiKey, _profileKey][_index];
+  _Tab get _currentTab => _tabs[_index];
+  GlobalKey<NavigatorState> get _currentKey => _currentTab.key;
   String get _currentRouteName =>
       [_homeRoute, _notiRoute, _profileRoute][_index];
   bool get _canGoBack => _currentKey.currentState?.canPop() ?? false;
-  String get _title => _tabs[_index].titleForRoute(_currentRouteName);
+  String get _title => _currentTab.titleForRoute(_currentRouteName);
 
-  // Android back button handling
   Future<bool> _onWillPop() async {
     if (_canGoBack) {
-      _currentKey.currentState!.pop();
+      _currentKey.currentState!.maybePop();
       return false;
     }
     if (_index != 0) {
-      setState(() => _index = 0);
+      _index = 0;
+      _requestRebuild();
       return false;
     }
-    return true; // exit app
+    return true;
+  }
+
+  Widget? _buildBottomArea() {
+    // Show HANavBar only at tab roots
+    if (!_canGoBack) {
+      return HANavBar(
+        index: _index,
+        onChanged: (i) {
+          if (_index == i) return;
+          _index = i;
+          _requestRebuild();
+        },
+        tabs: _tabs.map((t) => (t.icon, t.selectedIcon, t.label)).toList(),
+      );
+    }
+
+    // Sub-routes: route-specific bottom bars
+    switch (_currentRouteName) {
+      case AppRoutes.eventDetail:
+        return BottomCTA(
+          label: 'Register',
+          onPressed: () {
+            // TODO: start registration flow (sheet/route)
+          },
+        );
+      // For scoop detail, no CTA; let default fall through:
+      default:
+        return null;
+    }
   }
 
   @override
@@ -183,43 +215,36 @@ class _RootShellState extends State<RootShell> {
         body: IndexedStack(
           index: _index,
           children: [
-            // Home tab Navigator
-            Navigator(
-              key: _homeKey,
-              initialRoute: '/',
-              onGenerateRoute: (s) => (s.name == null || s.name == '/')
-                  ? _tabs[0].onGenerateRoute(const RouteSettings(name: '/'))
-                  : _tabs[0].onGenerateRoute(s),
-              observers: [_homeObserver],
-            ),
-            // Notifications tab Navigator
-            Navigator(
-              key: _notiKey,
-              initialRoute: '/',
-              onGenerateRoute: (s) => (s.name == null || s.name == '/')
-                  ? _tabs[1].onGenerateRoute(const RouteSettings(name: '/'))
-                  : _tabs[1].onGenerateRoute(s),
-              observers: [_notiObserver],
-            ),
-            // Profile tab Navigator
-            Navigator(
-              key: _profileKey,
-              initialRoute: '/',
-              onGenerateRoute: (s) => (s.name == null || s.name == '/')
-                  ? _tabs[2].onGenerateRoute(const RouteSettings(name: '/'))
-                  : _tabs[2].onGenerateRoute(s),
-              observers: [_profileObserver],
-            ),
+            for (final t in _tabs)
+              Navigator(
+                key: t.key,
+                // Provide a single initial route explicitly to avoid duplicates
+                onGenerateInitialRoutes: (_, __) => [
+                  t.onGenerateRoute(RouteSettings(name: t.rootName)),
+                ],
+                onGenerateRoute: t.onGenerateRoute,
+                observers: t.observers,
+              ),
           ],
         ),
-        bottomNavigationBar: HANavBar(
-          index: _index,
-          onChanged: (i) => setState(() => _index = i),
-          tabs: _tabs.map((t) => (t.icon, t.selectedIcon, t.label)).toList(),
-        ),
+        bottomNavigationBar: _buildBottomArea(),
       ),
     );
   }
+}
+
+class _TabObserver extends NavigatorObserver {
+  final void Function(Route<dynamic>?, Route<dynamic>?) onChanged;
+  _TabObserver(this.onChanged);
+  @override
+  void didPush(Route route, Route? previousRoute) =>
+      onChanged(route, previousRoute);
+  @override
+  void didPop(Route route, Route? previousRoute) =>
+      onChanged(previousRoute, route);
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) =>
+      onChanged(newRoute, oldRoute);
 }
 
 class _Tab {
@@ -229,6 +254,7 @@ class _Tab {
   final List<NavigatorObserver> observers;
   final Route<dynamic> Function(RouteSettings) onGenerateRoute;
   final String Function(String routeName) titleForRoute;
+  final String rootName;
 
   _Tab({
     required this.label,
@@ -238,5 +264,6 @@ class _Tab {
     required this.observers,
     required this.onGenerateRoute,
     required this.titleForRoute,
+    required this.rootName,
   });
 }

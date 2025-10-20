@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ha_mobile/core/routes.dart';
+
 import '../../data/mock/mock_data.dart';
 import '../widgets/card_event.dart';
+import '../widgets/list_tile_scoop.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -14,6 +16,7 @@ class HomeScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // ----- Upcoming Events -----
         Row(
           children: [
             Text(
@@ -56,6 +59,46 @@ class HomeScreen extends StatelessWidget {
               );
             },
           ),
+        ),
+
+        // Spacer / divider between sections
+        const SizedBox(height: 24),
+        // Divider(height: 1, thickness: 1, color: cs.outlineVariant),
+        const SizedBox(height: 16),
+
+        // ----- Saturday Scoops -----
+        Row(
+          children: [
+            Text(
+              'Saturday Scoops',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+              ),
+            ),
+            const Spacer(),
+            // Optional: a "View All" or filter action could go here later.
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Scoops list (non-scrollable; lets parent ListView scroll)
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: mockScoops.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, i) {
+            final s = mockScoops[i];
+            return ListTileScoop(
+              scoop: s,
+              onTap: () {
+                Navigator.of(
+                  context,
+                ).pushNamed(AppRoutes.scoopDetail, arguments: s);
+              },
+            );
+          },
         ),
       ],
     );

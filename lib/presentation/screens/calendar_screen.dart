@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+
 import '../../business/events/entities/event.dart';
 import '../widgets/list_tile_calendar.dart';
 import '../../core/routes.dart';
-import '../../business/events/entities/event.dart'; // you already have this
 import '../../data/mock/mock_data.dart';
+import '../../core/utils/date_formatters.dart'; // <- shared utils
 
 enum CalendarView { list, month }
-
-/// Top-level helper so it can be used in initializers / anywhere.
-DateTime _truncate(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -27,8 +25,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _focusedDay = _truncate(DateTime.now());
-    _selectedDay = _truncate(DateTime.now());
+    _focusedDay = truncateToDay(DateTime.now());
+    _selectedDay = truncateToDay(DateTime.now());
     _eventsByDay = _groupByDay(mockEvents);
   }
 
@@ -77,12 +75,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         return ListTileCalendar(
           event: e,
           onTap: () {
-            Navigator.of(context).pushNamed(
-              AppRoutes.eventDetail,
-              arguments: e, // pass the whole Event
-            );
+            Navigator.of(
+              context,
+            ).pushNamed(AppRoutes.eventDetail, arguments: e);
           },
-
           compact: false,
         );
       },
@@ -96,19 +92,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TableCalendar<Event>(
-          firstDay: _truncate(
+          firstDay: truncateToDay(
             DateTime.now().subtract(const Duration(days: 365)),
           ),
-          lastDay: _truncate(DateTime.now().add(const Duration(days: 365))),
+          lastDay: truncateToDay(DateTime.now().add(const Duration(days: 365))),
           focusedDay: _focusedDay,
           calendarFormat: CalendarFormat.month,
           startingDayOfWeek: StartingDayOfWeek.sunday,
           selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
-          eventLoader: (day) => _eventsByDay[_truncate(day)] ?? const [],
+          eventLoader: (day) => _eventsByDay[truncateToDay(day)] ?? const [],
           onDaySelected: (selected, focused) {
             setState(() {
-              _selectedDay = _truncate(selected);
-              _focusedDay = _truncate(focused);
+              _selectedDay = truncateToDay(selected);
+              _focusedDay = truncateToDay(focused);
             });
           },
           headerStyle: const HeaderStyle(
@@ -133,7 +129,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         const SizedBox(height: 12),
         if (dayEvents.isEmpty)
           Text(
-            'No events on ${_fmtDate(_selectedDay)}',
+            'No events on ${formatShortDate(_selectedDay)}',
             style: TextStyle(color: cs.onSurfaceVariant),
           )
         else
@@ -146,13 +142,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               final e = dayEvents[i];
               return ListTileCalendar(
                 event: e,
-                compact: true, // smaller variant under the calendar grid
-                showChevron: false, // optional
+                compact: true,
+                showChevron: false,
                 onTap: () {
-                  Navigator.of(context).pushNamed(
-                    AppRoutes.eventDetail,
-                    arguments: e, // pass the whole Event
-                  );
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.eventDetail, arguments: e);
                 },
               );
             },
@@ -165,35 +160,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Map<DateTime, List<Event>> _groupByDay(List<Event> list) {
     final map = <DateTime, List<Event>>{};
     for (final e in list) {
-      final d = _truncate(e.dateTime);
+      final d = truncateToDay(e.dateTime);
       map.putIfAbsent(d, () => []).add(e);
     }
     return map;
-  }
-
-  String _fmtDate(DateTime dt) {
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${m[dt.month - 1]} ${dt.day}';
-    // For full i18n later, use package:intl
-  }
-
-  String _fmtTime(DateTime dt) {
-    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final min = dt.minute.toString().padLeft(2, '0');
-    final ap = dt.hour < 12 ? 'AM' : 'PM';
-    return '$h:$min $ap';
   }
 }

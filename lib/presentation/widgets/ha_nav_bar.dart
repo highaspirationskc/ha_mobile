@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Reusable bottom navigation bar used by the shell.
-///
-/// Pass in the current tab index, a callback to change tabs,
-/// and a list of (icon, selectedIcon, label) for each tab.
 class HANavBar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
@@ -18,17 +14,40 @@ class HANavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: index,
-      onDestinationSelected: onChanged,
-      destinations: [
-        for (final t in tabs)
-          NavigationDestination(
-            icon: t.$1,
-            selectedIcon: t.$2,
-            label: t.$3,
+    final cs = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        // soft shadow from the top edge of the bar
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            spreadRadius: 0,
+            offset: const Offset(0, -4), // negative Y => shadow above
           ),
-      ],
+        ],
+      ),
+      child: Material(
+        color: cs.surface,
+        surfaceTintColor: Colors
+            .transparent, // avoid the Material3 tint washing out your surface
+        child: NavigationBar(
+          selectedIndex: index,
+          backgroundColor: Colors
+              .transparent, // use the Material color above, keep this transparent
+          elevation: 0, // shadow handled by the BoxShadow above
+          onDestinationSelected: onChanged,
+          destinations: [
+            for (final t in tabs)
+              NavigationDestination(
+                icon: t.$1,
+                selectedIcon: t.$2,
+                label: t.$3,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

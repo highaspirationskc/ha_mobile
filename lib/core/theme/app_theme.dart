@@ -1,28 +1,39 @@
 // lib/core/theme/app_theme.dart
 import 'package:flutter/material.dart';
+import 'brand_colors.dart';
 
 ThemeData buildTheme(ColorScheme scheme) {
-  return ThemeData(
+  final isDark = scheme.brightness == Brightness.dark;
+  final defaultTextColor = isDark ? kFontLight : kFontDark;
+
+  final base = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    // Typography (swap to brand fonts later with google_fonts)
-    textTheme: Typography.material2021().black.apply(
-      bodyColor: scheme.onSurface,
-      displayColor: scheme.onSurface,
-    ),
+
+    // Pages/surfaces now come from surface
+    scaffoldBackgroundColor: scheme.surface,
+    canvasColor: scheme.surface,
+
     appBarTheme: AppBarTheme(
       backgroundColor: scheme.surface,
-      foregroundColor: scheme.onSurface,
+      foregroundColor: defaultTextColor,
       elevation: 0,
     ),
-    inputDecorationTheme: const InputDecorationTheme(
-      border: OutlineInputBorder(),
+    cardColor: scheme.surface,
+  );
+
+  return base.copyWith(
+    textTheme: base.textTheme.apply(
+      bodyColor: defaultTextColor,
+      displayColor: defaultTextColor,
     ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+    iconTheme: IconThemeData(color: defaultTextColor),
+    listTileTheme: ListTileThemeData(
+      textColor: defaultTextColor,
+      iconColor: defaultTextColor,
+    ),
+    inputDecorationTheme: base.inputDecorationTheme.copyWith(
+      hintStyle: TextStyle(color: defaultTextColor.withOpacity(0.60)),
     ),
   );
 }
