@@ -1,130 +1,240 @@
 // lib/presentation/widgets/card_event.dart
 import 'package:flutter/material.dart';
+
 import '../../business/events/entities/event.dart';
+import '../../data/services/api_service.dart';
+import '../../core/utils/date_formatters.dart';
 import '../../business/user/entities/user.dart';
+
 import 'avatar_mini.dart';
 import 'button_round_small.dart';
-import '../../core/utils/date_formatters.dart';
 
-class EventCard extends StatelessWidget {
+class EventCard extends StatefulWidget {
   final Event event;
   final VoidCallback? onTap;
-  final VoidCallback? onRegister; // NEW
 
-  const EventCard({
-    super.key,
-    required this.event,
-    this.onTap,
-    this.onRegister,
-  });
+  const EventCard({super.key, required this.event, this.onTap});
+
+  @override
+  State<EventCard> createState() => _EventCardState();
+}
+
+class _EventCardState extends State<EventCard> {
+  static const String _userId = 'current-user'; // swap when auth is wired
+
+  bool _loadingStatus = true;
+  bool _registered = false;
+  bool _checkedIn = false;
+
+  bool _registering = false;
+  bool _checkingIn = false;
+
+  void _onServiceChange() {
+    // refresh this card whenever the service signals a state change
+    _loadState();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+    ApiService.instance.changes.addListener(_onServiceChange);
+  }
+
+  @override
+  void dispose() {
+    ApiService.instance.changes.removeListener(_onServiceChange);
+    super.dispose();
+  }
+
+  Future<void> _loadState() async {
+    final isReg = await ApiService.instance.isRegistered(
+      eventId: widget.event.id,
+      userId: _userId,
+    );
+    final isIn = await ApiService.instance.isCheckedIn(
+      eventId: widget.event.id,
+      userId: _userId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _registered = isReg;
+      _checkedIn = isIn;
+      _loadingStatus = false;
+    });
+  }
+
+  Future<void> _onPrimaryAction() async {
+    // Register
+    if (!_registered) {
+      if (_registering) return;
+      setState(() => _registering = true);
+      try {
+        await ApiService.instance.registerForEvent(
+          eventId: widget.event.id,
+          userId: _userId,
+        );
+        if (!mounted) return;
+        setState(() => _registered = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You’re registered!'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString()),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _registering = false);
+      }
+      return;
+    }
+
+    // Check-in
+    if (_registered && !_checkedIn) {
+      if (_checkingIn) return;
+      setState(() => _checkingIn = true);
+      try {
+        await ApiService.instance.checkInForEvent(
+          eventId: widget.event.id,
+          userId: _userId,
+        );
+        if (!mounted) return;
+        setState(() => _checkedIn = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Checked in!'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString()),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _checkingIn = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final t = Theme.of(context).textTheme;
+    final e = widget.event;
 
-    return Card(
-      elevation: 1,
+    final actionLabel = _loadingStatus
+        ? '...'
+        : (!_registered
+              ? 'Register'
+              : (!_checkedIn ? 'Check-in' : 'Checked in'));
+    final actionLoading = _loadingStatus || _registering || _checkingIn;
+    final actionEnabled = !_loadingStatus && !(_registered && _checkedIn);
+
+    final List<User> shown = e.attendees.take(3).toList();
+    final int extra = (e.attendeeCount - shown.length).clamp(0, 999);
+
+    return Material(
+      color: cs.surface,
+      elevation: 0,
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: cs.outlineVariant),
-      ),
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header image
+            // Image
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: _EventImage(src: event.image),
+              child: _HeaderImage(src: e.image),
             ),
 
-            // Title
+            // Content
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-              child: Text(
-                event.name,
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-
-            // Date/Time + Location row
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.calendar_today, size: 18, color: cs.primary),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      formatCardDateTime(event.dateTime), // "Oct 25th, 5:00 PM"
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(Icons.place, size: 18, color: cs.primary),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      event.location,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Attending + Register row
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-              child: Row(
-                children: [
-                  // LEFT: avatars + label (hug content)
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (event.attendeeCount > 0) ...[
-                          _AttendeesRow(users: event.attendees),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Attending',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                  // Title + Registered badge
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          e.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                        ] else
-                          Text(
-                            'Be the first to register',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
+                        ),
+                      ),
+                      if (_registered) ...[
+                        const SizedBox(width: 8),
+                        const _RegisteredBadgeTiny(),
                       ],
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 6),
 
-                  // RIGHT: register button
-                  ButtonRoundSmall(
-                    label: 'Register',
-                    // onPressed: onRegister,
-                    onPressed: () => print('Register'),
-                    tonal: false, // primary by default
-                    minHeight: 32,
+                  // Date/time & Location
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: cs.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${formatShortDate(e.dateTime)} • ${formatTime(e.dateTime)}',
+                        style: t.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(Icons.place_outlined, size: 16, color: cs.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          e.location,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Attendees + action
+                  Row(
+                    children: [
+                      _AttendingStripUsers(users: shown, extraCount: extra),
+                      const Spacer(),
+                      ButtonRoundSmall(
+                        label: actionLabel,
+                        onPressed: actionEnabled ? _onPrimaryAction : null,
+                        isLoading: actionLoading,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -136,116 +246,110 @@ class EventCard extends StatelessWidget {
   }
 }
 
-class _EventImage extends StatelessWidget {
+// --- pieces ---
+
+class _HeaderImage extends StatelessWidget {
   final String src;
-  const _EventImage({required this.src});
+  const _HeaderImage({required this.src});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    Widget placeholder() => Container(
+      color: cs.surfaceVariant,
+      alignment: Alignment.center,
+      child: Icon(Icons.image, color: cs.primary),
+    );
+
     final isNetwork = src.startsWith('http');
-    final img = (src.trim().isEmpty)
-        ? _placeholder(context)
-        : isNetwork
+    if (src.trim().isEmpty) return placeholder();
+
+    return isNetwork
         ? Image.network(
             src,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _placeholder(context),
+            errorBuilder: (_, __, ___) => placeholder(),
           )
         : Image.asset(
             src,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _placeholder(context),
+            errorBuilder: (_, __, ___) => placeholder(),
           );
-    return img;
-  }
-
-  Widget _placeholder(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      color: cs.surfaceVariant,
-      alignment: Alignment.center,
-      child: Icon(Icons.image, color: cs.onSurfaceVariant),
-    );
   }
 }
 
-// Overlapped avatars width is tight so the label can sit close
-class _AttendeesRow extends StatelessWidget {
-  final List<User> users;
-  const _AttendeesRow({required this.users});
+class _RegisteredBadgeTiny extends StatelessWidget {
+  const _RegisteredBadgeTiny();
 
   @override
   Widget build(BuildContext context) {
-    const faceSize = 26.0;
-    const overlap = -8.0; // negative = overlap
-    const maxFaces = 3;
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
 
-    final visible = users.take(maxFaces).toList();
-    final extra = users.length - visible.length;
-
-    const step = faceSize + overlap; // effective spacing
-
-    final facesWidth = visible.isEmpty
-        ? 0.0
-        : faceSize + (visible.length - 1) * step;
-    final extraWidth = extra > 0 ? step : 0.0;
-    final totalWidth = facesWidth + extraWidth;
-
-    return SizedBox(
-      width: totalWidth,
-      height: faceSize,
-      child: Stack(
-        clipBehavior: Clip.none,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.primary.withOpacity(0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (int i = 0; i < visible.length; i++)
-            Positioned(
-              left: i * step,
-              child: AvatarMini(
-                firstName: visible[i].firstName,
-                lastName: visible[i].lastName,
-                image: visible[i].image,
-                size: faceSize,
-              ),
+          Icon(Icons.verified, size: 12, color: cs.onPrimaryContainer),
+          const SizedBox(width: 4),
+          Text(
+            'Registered',
+            style: t.labelSmall?.copyWith(
+              color: cs.onPrimaryContainer,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
             ),
-          if (extra > 0)
-            Positioned(
-              left: visible.length * step,
-              child: _ExtraCountCircle(count: extra, size: faceSize),
-            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ExtraCountCircle extends StatelessWidget {
-  final int count;
-  final double size;
-  const _ExtraCountCircle({required this.count, required this.size});
+class _AttendingStripUsers extends StatelessWidget {
+  final List<User> users; // up to 3 shown
+  final int extraCount; // remaining attendees beyond shown avatars
+  const _AttendingStripUsers({required this.users, required this.extraCount});
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: cs.primary,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white,
-          width: 2,
-        ), // match avatar border
-      ),
-      child: Text(
-        '+$count',
-        style: TextStyle(
-          fontSize: size * 0.42,
-          fontWeight: FontWeight.w700,
-          color: cs.surface,
+    final t = Theme.of(context).textTheme;
+
+    final width = users.isEmpty ? 0.0 : (24 + (users.length - 1) * 18.0);
+
+    return Row(
+      children: [
+        SizedBox(
+          height: 24,
+          width: width,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (int i = 0; i < users.length; i++)
+                Positioned(
+                  left: i * 18.0,
+                  child: AvatarMini(
+                    imageUrl: users[i].image ?? '',
+                    // If you extended AvatarMini with initials/color, pass here:
+                    // initials: '${users[i].firstName} ${users[i].lastName}',
+                    // color: users[i].profileColor,
+                  ),
+                ),
+            ],
+          ),
         ),
-      ),
+        if (extraCount > 0) ...[
+          const SizedBox(width: 6),
+          Text('+$extraCount', style: t.labelMedium),
+        ],
+      ],
     );
   }
 }

@@ -1,120 +1,128 @@
-import 'dart:io' show File;
+// lib/presentation/widgets/avatar_mini.dart
 import 'package:flutter/material.dart';
-import '../../core/theme/color_schemes.dart'; // for kProfileColors (your 12 profile colors)
 
 class AvatarMini extends StatelessWidget {
-  final String? firstName;
-  final String? lastName;
-  final String? image; // http(s) / assets/... / local file path
-  final int? colorIndex; // optional index into kProfileColors
-  final double size; // diameter
-  final String? semanticsLabel;
+  /// Network URL or assets/... path. If null/empty or fails, falls back to initials.
+  final String? imageUrl;
 
-  /// 2px white border by default as requested.
-  final double borderWidth;
-  final Color borderColor;
+  /// Optional initials to show when no image. e.g. "AB"
+  final String? initials;
+
+  /// Optional solid background color used behind initials.
+  final Color? color;
+
+  /// Diameter in logical pixels.
+  final double size;
 
   const AvatarMini({
     super.key,
-    this.firstName,
-    this.lastName,
-    this.image,
-    this.colorIndex,
-    this.size = 28,
-    this.semanticsLabel,
-    this.borderWidth = 2.0,
-    this.borderColor = Colors.white,
+    this.imageUrl,
+    this.initials,
+    this.color,
+    this.size = 24,
+  });
+
+  bool get _isNetwork =>
+      (imageUrl != null &&
+      imageUrl!.isNotEmpty &&
+      imageUrl!.startsWith('http'));
+
+  bool get _isAsset =>
+      (imageUrl != null &&
+      imageUrl!.isNotEmpty &&
+      !imageUrl!.startsWith('http'));
+
+  @override
+  Widget build(BuildContext context) {
+    // Outer white ring (2px)
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(2),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(child: _buildInner(context)),
+    );
+  }
+
+  Widget _buildInner(BuildContext context) {
+    final fallback = _InitialsChip(
+      text: _safeInitials(initials),
+      color: color ?? Theme.of(context).colorScheme.primaryContainer,
+      size: size - 4, // account for 2px border padding on each side
+    );
+
+    if (imageUrl == null || imageUrl!.isEmpty) return fallback;
+
+    if (_isNetwork) {
+      return Image.network(
+        imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+
+    if (_isAsset) {
+      return Image.asset(
+        imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+
+    return fallback;
+  }
+
+  String _safeInitials(String? s) {
+    if (s == null || s.trim().isEmpty) return '';
+    final parts = s.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      return parts.first.characters.take(2).toString().toUpperCase();
+    }
+    final a = parts.first.characters.firstOrNull ?? '';
+    final b = parts.last.characters.firstOrNull ?? '';
+    return (a + b).toUpperCase();
+  }
+}
+
+class _InitialsChip extends StatelessWidget {
+  final String text;
+  final Color color;
+  final double size;
+  const _InitialsChip({
+    required this.text,
+    required this.color,
+    required this.size,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasImg = (image ?? '').trim().isNotEmpty;
-
-    return Semantics(
-      label: semanticsLabel ?? _defaultSemantics(),
-      image: hasImg,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: borderColor, width: borderWidth),
-        ),
-        clipBehavior: Clip.antiAlias, // ensures the child is clipped to circle
-        child: hasImg ? _buildImage() : _buildInitials(context),
-      ),
-    );
-  }
-
-  // --- helpers ---
-
-  Widget _buildImage() {
-    final src = image!.trim();
-    final isNetwork = src.startsWith('http');
-    final isAsset = src.startsWith('assets/');
-    final img = isNetwork
-        ? Image.network(
-            src,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox(),
-          )
-        : isAsset
-        ? Image.asset(
-            src,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox(),
-          )
-        : Image.file(
-            File(src),
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox(),
-          );
-
-    // BoxFit.cover ensures the image fills the circular crop.
-    return img;
-  }
-
-  Widget _buildInitials(BuildContext context) {
-    final bg = _resolveColor(context);
-    final initials = _initials(firstName, lastName);
-
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: bg,
+      width: size,
+      height: size,
+      color: color,
       alignment: Alignment.center,
       child: Text(
-        initials,
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.clip,
         style: TextStyle(
+          fontSize: (size * 0.42),
           fontWeight: FontWeight.w700,
-          fontSize: size * 0.43,
-          color: Colors.white,
+          color: _bestOnColor(color, cs),
           letterSpacing: 0.2,
         ),
       ),
     );
   }
 
-  Color _resolveColor(BuildContext context) {
-    if (colorIndex != null && kProfileColors.isNotEmpty) {
-      final i = colorIndex!.clamp(0, kProfileColors.length - 1);
-      return kProfileColors[i];
-    }
-    // Fallback if no index provided: use a stable color from theme
-    return Theme.of(context).colorScheme.secondaryContainer;
-  }
-
-  String _defaultSemantics() {
-    final f = (firstName ?? '').trim();
-    final l = (lastName ?? '').trim();
-    if (f.isEmpty && l.isEmpty) return 'User avatar';
-    return 'Avatar of $f $l';
-  }
-
-  static String _initials(String? f, String? l) {
-    final fn = (f ?? '').trim();
-    final ln = (l ?? '').trim();
-    if (fn.isEmpty && ln.isEmpty) return 'U';
-    if (ln.isEmpty) return fn.characters.first.toUpperCase();
-    if (fn.isEmpty) return ln.characters.first.toUpperCase();
-    return (fn.characters.first + ln.characters.first).toUpperCase();
+  // Very simple contrast heuristic for text color on the chip
+  Color _bestOnColor(Color bg, ColorScheme cs) {
+    // YIQ luma
+    final yiq = ((bg.red * 299) + (bg.green * 587) + (bg.blue * 114)) / 1000;
+    return yiq >= 160 ? Colors.black : Colors.white;
   }
 }

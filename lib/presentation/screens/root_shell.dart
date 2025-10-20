@@ -188,18 +188,18 @@ class _RootShellState extends State<RootShell> {
     }
 
     // Sub-routes: route-specific bottom bars
-    switch (_currentRouteName) {
-      case AppRoutes.eventDetail:
-        return BottomCTA(
-          label: 'Register',
-          onPressed: () {
-            // TODO: start registration flow (sheet/route)
-          },
-        );
-      // For scoop detail, no CTA; let default fall through:
-      default:
-        return null;
-    }
+    // switch (_currentRouteName) {
+    //   case AppRoutes.eventDetail:
+    //     return BottomCTA(
+    //       label: 'Register',
+    //       onPressed: () {
+    //         // TODO: start registration flow (sheet/route)
+    //       },
+    //     );
+    //   // For scoop detail, no CTA; let default fall through:
+    //   default:
+    //     return null;
+    // }
   }
 
   @override

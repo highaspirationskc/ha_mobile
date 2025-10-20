@@ -8,6 +8,7 @@ class ButtonRoundSmall extends StatelessWidget {
   final bool tonal; // if true, uses secondaryContainer; else primary
   final EdgeInsetsGeometry? padding;
   final double minHeight;
+  final bool isLoading; // NEW
 
   const ButtonRoundSmall({
     super.key,
@@ -17,6 +18,7 @@ class ButtonRoundSmall extends StatelessWidget {
     this.tonal = false,
     this.padding,
     this.minHeight = 32,
+    this.isLoading = false, // NEW default
   });
 
   @override
@@ -37,14 +39,41 @@ class ButtonRoundSmall extends StatelessWidget {
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
 
-    if (leadingIcon != null) {
-      return FilledButton.icon(
-        onPressed: onPressed,
-        label: Text(label),
-        icon: Icon(leadingIcon, size: 16),
-        style: style,
-      );
+    Widget? leading() {
+      if (isLoading) {
+        return SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(fg),
+          ),
+        );
+      }
+      if (leadingIcon != null) {
+        return Icon(leadingIcon, size: 16, color: fg);
+      }
+      return null;
     }
-    return FilledButton(onPressed: onPressed, style: style, child: Text(label));
+
+    final lead = leading();
+
+    return FilledButton(
+      onPressed: isLoading ? null : onPressed,
+      style: style,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (lead != null) ...[
+            lead,
+            const SizedBox(width: 4), // exact 4px gap
+          ],
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ],
+      ),
+    );
   }
 }
