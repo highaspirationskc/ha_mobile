@@ -1,10 +1,11 @@
 // lib/presentation/screens/root_shell.dart
 import 'package:flutter/material.dart';
+import 'package:ha_mobile/presentation/screens/check_in_scanner.dart';
 
 import '../../core/routes.dart';
 import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
-import '../widgets/bottom_cta.dart';
+// import '../widgets/bottom_cta.dart'; // keep if you use route-specific CTAs
 
 // Screens (body-only)
 import 'home_screen.dart';
@@ -52,15 +53,15 @@ class _RootShellState extends State<RootShell> {
 
   late final _homeObserver = _TabObserver((r, _) {
     _homeRoute = r?.settings.name ?? AppRoutes.homeRoot;
-    _requestRebuild(); // deferred
+    _requestRebuild();
   });
   late final _notiObserver = _TabObserver((r, _) {
     _notiRoute = r?.settings.name ?? AppRoutes.notificationsRoot;
-    _requestRebuild(); // deferred
+    _requestRebuild();
   });
   late final _profileObserver = _TabObserver((r, _) {
     _profileRoute = r?.settings.name ?? AppRoutes.profileRoot;
-    _requestRebuild(); // deferred
+    _requestRebuild();
   });
 
   // Build tab descriptors once (stable)
@@ -90,6 +91,12 @@ class _RootShellState extends State<RootShell> {
             return MaterialPageRoute(
               builder: (_) => ScoopDetailScreen(scoop: scoop),
               settings: const RouteSettings(name: AppRoutes.scoopDetail),
+            );
+          case AppRoutes.checkInScanner:
+            final eventId = settings.arguments as String?;
+            return MaterialPageRoute(
+              builder: (_) => CheckInScannerScreen(mockEventId: eventId),
+              settings: const RouteSettings(name: AppRoutes.checkInScanner),
             );
           case AppRoutes.homeRoot:
           default:
@@ -160,6 +167,8 @@ class _RootShellState extends State<RootShell> {
   bool get _canGoBack => _currentKey.currentState?.canPop() ?? false;
   String get _title => _currentTab.titleForRoute(_currentRouteName);
 
+  bool get _isScannerRoute => _currentRouteName == AppRoutes.checkInScanner;
+
   Future<bool> _onWillPop() async {
     if (_canGoBack) {
       _currentKey.currentState!.maybePop();
@@ -174,6 +183,9 @@ class _RootShellState extends State<RootShell> {
   }
 
   Widget? _buildBottomArea() {
+    // Hide any bottom UI on the scanner route
+    if (_isScannerRoute) return null;
+
     // Show HANavBar only at tab roots
     if (!_canGoBack) {
       return HANavBar(
@@ -187,31 +199,30 @@ class _RootShellState extends State<RootShell> {
       );
     }
 
-    // Sub-routes: route-specific bottom bars
+    // Example: route-specific bottom CTAs (keep commented unless used)
     // switch (_currentRouteName) {
     //   case AppRoutes.eventDetail:
-    //     return BottomCTA(
-    //       label: 'Register',
-    //       onPressed: () {
-    //         // TODO: start registration flow (sheet/route)
-    //       },
-    //     );
-    //   // For scoop detail, no CTA; let default fall through:
+    //     return BottomCTA(label: 'Register', onPressed: () {});
     //   default:
     //     return null;
     // }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final appBar = _isScannerRoute
+        ? null // HIDE HEADER on scanner
+        : HAAppBar(
+            title: _title,
+            showBack: _canGoBack,
+            onBack: () => _currentKey.currentState!.maybePop(),
+          );
+
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        appBar: HAAppBar(
-          title: _title,
-          showBack: _canGoBack,
-          onBack: () => _currentKey.currentState!.maybePop(),
-        ),
+        appBar: appBar,
         body: IndexedStack(
           index: _index,
           children: [

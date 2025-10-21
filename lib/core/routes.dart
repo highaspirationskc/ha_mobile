@@ -7,4 +7,5 @@ class AppRoutes {
   static const calendar = '/calendar';
   static const notificationMessage = '/message';
   static const scoopDetail = '/scoop';
+  static const checkInScanner = '/check-in';
 }

@@ -1,10 +1,15 @@
 // lib/presentation/screens/event_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:ha_mobile/core/routes.dart';
+
 import '../../business/events/entities/event.dart';
+import '../../business/user/entities/user.dart';
 import '../../core/utils/date_formatters.dart';
 import '../../data/services/api_service.dart';
+import '../../core/session.dart'; // kCurrentUserId
 import '../widgets/button_long.dart';
 import '../widgets/button_long_outlined.dart';
+import '../widgets/avatar_mini.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final Event event;
@@ -23,22 +28,33 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   bool _checkingIn = false;
   bool _unregistering = false;
 
-  static const String _userId = 'current-user';
-
   @override
   void initState() {
     super.initState();
     _loadState();
+    ApiService.instance.changes.addListener(
+      _onServiceChange,
+    ); // listen for global updates
+  }
+
+  @override
+  void dispose() {
+    ApiService.instance.changes.removeListener(_onServiceChange);
+    super.dispose();
+  }
+
+  void _onServiceChange() {
+    _loadState(); // pull fresh flags whenever service notifies
   }
 
   Future<void> _loadState() async {
     final isReg = await ApiService.instance.isRegistered(
       eventId: widget.event.id,
-      userId: _userId,
+      userId: kCurrentUserId,
     );
     final isIn = await ApiService.instance.isCheckedIn(
       eventId: widget.event.id,
-      userId: _userId,
+      userId: kCurrentUserId,
     );
     if (!mounted) return;
     setState(() {
@@ -54,10 +70,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     try {
       await ApiService.instance.registerForEvent(
         eventId: widget.event.id,
-        userId: _userId,
+        userId: kCurrentUserId,
       );
+      ApiService.instance.changes.value++; // broadcast
       if (!mounted) return;
-      setState(() => _registered = true);
+      await _loadState(); // re-pull fresh state
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('You’re registered!'),
@@ -79,32 +96,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _onCheckIn() async {
-    if (_checkingIn || !_registered || _checkedIn) return;
+    if (!_registered || _checkedIn) return;
     setState(() => _checkingIn = true);
-    try {
-      await ApiService.instance.checkInForEvent(
-        eventId: widget.event.id,
-        userId: _userId,
-      );
-      if (!mounted) return;
-      setState(() => _checkedIn = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Checked in!'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _checkingIn = false);
+
+    final ok = await Navigator.of(context).pushNamed(
+      AppRoutes.checkInScanner,
+      arguments: widget.event.id, // let mock scan line up with this event
+    );
+
+    if (!mounted) return;
+    setState(() => _checkingIn = false);
+
+    if (ok == true) {
+      await _loadState(); // refresh status from service
     }
   }
 
@@ -114,13 +118,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     try {
       await ApiService.instance.unregister(
         eventId: widget.event.id,
-        userId: _userId,
+        userId: kCurrentUserId,
       );
+      ApiService.instance.changes.value++; // broadcast
       if (!mounted) return;
-      setState(() {
-        _registered = false;
-        _checkedIn = false;
-      });
+      await _loadState(); // refresh
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Registration cancelled.'),
@@ -147,14 +149,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final cs = Theme.of(context).colorScheme;
     final e = widget.event;
 
+    // Prepare attendees for the strip
+    final List<User> shown = e.attendees.take(6).toList(); // show up to 6 here
+    final int extra = (e.attendeeCount - shown.length).clamp(0, 999);
+
     return ListView(
       padding: EdgeInsets.zero,
       children: [
+        // Full-bleed header image
         AspectRatio(
           aspectRatio: 16 / 9,
           child: _HeaderImage(src: e.image),
         ),
 
+        // Content
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
@@ -192,6 +200,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               _InfoRow(icon: Icons.place_outlined, primary: e.location),
               const _SectionDivider(),
 
+              // About
               Text(
                 'About',
                 style: textTheme.titleMedium?.copyWith(
@@ -200,6 +209,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               ),
               const SizedBox(height: 8),
               Text(e.description, style: textTheme.bodyLarge),
+
+              // ---- Attending (between About and buttons) ----
+              const SizedBox(height: 24),
+              Text(
+                'Attending',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _AttendeesStrip(users: shown, extraCount: extra),
               const SizedBox(height: 24),
 
               // ---- Actions ----
@@ -273,7 +293,6 @@ class _RegisteredBadge extends StatelessWidget {
   }
 }
 
-// --- helpers (unchanged) ---
 class _HeaderImage extends StatelessWidget {
   final String src;
   const _HeaderImage({required this.src});
@@ -348,6 +367,74 @@ class _SectionDivider extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Divider(height: 1, thickness: 1, color: cs.outlineVariant),
+    );
+  }
+}
+
+/// Compact horizontally-overlapped avatar strip with "+N" badge
+class _AttendeesStrip extends StatelessWidget {
+  final List<User> users; // shown
+  final int extraCount; // remaining attendees
+  const _AttendeesStrip({required this.users, required this.extraCount});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+
+    // 24px avatars with 6px overlap => 18px step
+    final width = users.isEmpty ? 0.0 : (24 + (users.length - 1) * 18.0);
+
+    return Row(
+      children: [
+        if (users.isNotEmpty)
+          SizedBox(
+            height: 24,
+            width: width,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < users.length; i++)
+                  Positioned(
+                    left: i * 18.0,
+                    child: AvatarMini(imageUrl: users[i].image ?? ''),
+                  ),
+              ],
+            ),
+          ),
+
+        if (users.isNotEmpty && extraCount > 0) const SizedBox(width: 8),
+
+        if (extraCount > 0)
+          Container(
+            height: 24,
+            constraints: const BoxConstraints(minWidth: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              color: cs.primary,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white,
+                width: 2,
+                strokeAlign: BorderSide.strokeAlignOutside,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '+$extraCount',
+              style: t.labelSmall?.copyWith(
+                color: cs.onPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+
+        if (users.isEmpty && extraCount == 0)
+          Text(
+            'No attendees yet',
+            style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+          ),
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
-// lib/presentation/widgets/card_event.dart
 import 'package:flutter/material.dart';
+import 'package:ha_mobile/core/routes.dart';
 
+import 'package:ha_mobile/core/session.dart'; // kCurrentUserId
 import '../../business/events/entities/event.dart';
 import '../../data/services/api_service.dart';
 import '../../core/utils/date_formatters.dart';
@@ -20,8 +21,6 @@ class EventCard extends StatefulWidget {
 }
 
 class _EventCardState extends State<EventCard> {
-  static const String _userId = 'current-user'; // swap when auth is wired
-
   bool _loadingStatus = true;
   bool _registered = false;
   bool _checkedIn = false;
@@ -30,8 +29,7 @@ class _EventCardState extends State<EventCard> {
   bool _checkingIn = false;
 
   void _onServiceChange() {
-    // refresh this card whenever the service signals a state change
-    _loadState();
+    _loadState(); // refresh when service signals change
   }
 
   @override
@@ -50,11 +48,11 @@ class _EventCardState extends State<EventCard> {
   Future<void> _loadState() async {
     final isReg = await ApiService.instance.isRegistered(
       eventId: widget.event.id,
-      userId: _userId,
+      userId: kCurrentUserId,
     );
     final isIn = await ApiService.instance.isCheckedIn(
       eventId: widget.event.id,
-      userId: _userId,
+      userId: kCurrentUserId,
     );
     if (!mounted) return;
     setState(() {
@@ -72,10 +70,11 @@ class _EventCardState extends State<EventCard> {
       try {
         await ApiService.instance.registerForEvent(
           eventId: widget.event.id,
-          userId: _userId,
+          userId: kCurrentUserId,
         );
+        ApiService.instance.changes.value++; // broadcast to others
         if (!mounted) return;
-        setState(() => _registered = true);
+        await _loadState(); // ensure fresh state locally
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('You’re registered!'),
@@ -100,34 +99,15 @@ class _EventCardState extends State<EventCard> {
 
     // Check-in
     if (_registered && !_checkedIn) {
-      if (_checkingIn) return;
-      setState(() => _checkingIn = true);
-      try {
-        await ApiService.instance.checkInForEvent(
-          eventId: widget.event.id,
-          userId: _userId,
-        );
-        if (!mounted) return;
-        setState(() => _checkedIn = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Checked in!'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString()),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _checkingIn = false);
+      final ok = await Navigator.of(context).pushNamed(
+        AppRoutes.checkInScanner,
+        arguments: widget.event.id, // pass id so mock scan targets this event
+      );
+      if (!mounted) return;
+      if (ok == true) {
+        await _loadState(); // refresh after completing sheet
       }
+      return;
     }
   }
 
@@ -149,7 +129,7 @@ class _EventCardState extends State<EventCard> {
     final int extra = (e.attendeeCount - shown.length).clamp(0, 999);
 
     return Material(
-      color: cs.surface,
+      color: Colors.white,
       elevation: 0,
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
@@ -158,10 +138,16 @@ class _EventCardState extends State<EventCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: _HeaderImage(src: e.image),
+            // Image (inset, rounded, 16:9)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: _HeaderImage(src: e.image),
+                ),
+              ),
             ),
 
             // Content
@@ -320,35 +306,59 @@ class _AttendingStripUsers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
 
+    // width for overlapping avatars (24px circles with 6px overlap -> 18px step)
     final width = users.isEmpty ? 0.0 : (24 + (users.length - 1) * 18.0);
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          height: 24,
-          width: width,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              for (int i = 0; i < users.length; i++)
-                Positioned(
-                  left: i * 18.0,
-                  child: AvatarMini(
-                    imageUrl: users[i].image ?? '',
-                    // If you extended AvatarMini with initials/color, pass here:
-                    // initials: '${users[i].firstName} ${users[i].lastName}',
-                    // color: users[i].profileColor,
+        if (users.isNotEmpty)
+          SizedBox(
+            height: 24,
+            width: width,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < users.length; i++)
+                  Positioned(
+                    left: i * 18.0,
+                    child: AvatarMini(imageUrl: users[i].image ?? ''),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-        if (extraCount > 0) ...[
-          const SizedBox(width: 6),
-          Text('+$extraCount', style: t.labelMedium),
-        ],
+
+        if (users.isNotEmpty && extraCount > 0) const SizedBox(width: 6),
+
+        if (extraCount > 0)
+          Container(
+            height: 24,
+            constraints: const BoxConstraints(minWidth: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              color: cs.primary,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white,
+                width: 2,
+                strokeAlign: BorderSide.strokeAlignOutside,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '+$extraCount',
+              style: t.labelSmall?.copyWith(
+                color: cs.onPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              softWrap: false,
+            ),
+          ),
       ],
     );
   }

@@ -1,10 +1,20 @@
 // lib/data/mock/mock_data.dart
 import 'dart:math';
+
 import '../../business/events/entities/event.dart';
-import '../../business/user/entities/user.dart';
 import '../../business/scoops/entities/scoop.dart';
 
-/// -------- Mock Users (50) --------
+// NEW role-based user models
+import '../../business/user/entities/user_base.dart';
+import '../../business/user/entities/user_role.dart';
+import '../../business/user/entities/user_refs.dart';
+import '../../business/user/entities/role_mentee.dart';
+import '../../business/user/entities/role_mentor.dart';
+
+/// =================================================================================
+/// USERS
+/// =================================================================================
+
 final _rng = Random(42);
 
 const _firstNames = [
@@ -59,6 +69,7 @@ const _firstNames = [
   'Remy',
   'Blair',
 ];
+
 const _lastNames = [
   'Taylor',
   'Nguyen',
@@ -122,34 +133,104 @@ const _headshots = [
   'https://images.unsplash.com/photo-1544005314-04d1a1f5f1a0?q=80&w=512&auto=format&fit=crop',
 ];
 
-List<User> _buildUsers(int count) {
-  return List.generate(count, (i) {
-    final f = _firstNames[i % _firstNames.length];
-    final l = _lastNames[i % _lastNames.length];
-    // ~60% with images, 40% without
-    final hasImg = _rng.nextDouble() < 0.6;
-    final img = hasImg ? _headshots[_rng.nextInt(_headshots.length)] : '';
-    return User(
-      firstName: f,
-      lastName: l,
-      email: '${f.toLowerCase()}.${l.toLowerCase()}@example.com',
-      image: img,
-    );
-  });
+User _genUser(int idx) {
+  final f = _firstNames[idx % _firstNames.length];
+  final l = _lastNames[idx % _lastNames.length];
+  final hasImg = _rng.nextDouble() < 0.6; // ~60% with images
+  final img = hasImg ? _headshots[_rng.nextInt(_headshots.length)] : null;
+  return User(
+    id: 'u_${idx + 1}',
+    email: '${f.toLowerCase()}.${l.toLowerCase()}@example.com',
+    firstName: f,
+    lastName: l,
+    image: img,
+    // random profile color index 0..11
+    colorIndex: _rng.nextInt(12),
+    roles: const {}, // generic users have no role by default
+  );
 }
 
-final List<User> mockUsers = _buildUsers(50);
-
-/// A single featured mock user you’ve been using
-const User mockUser = User(
-  firstName: 'Avery',
-  lastName: 'Taylor',
-  email: 'avery.taylor@highaspirations.org',
-  image:
-      'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=512&auto=format&fit=crop',
+/// Special users: one mentee + one mentor (linked)
+final User mockMentee = User(
+  id: 'u_mentee_1',
+  email: 'mentee@example.com',
+  firstName: 'Jordan',
+  lastName: 'Lee',
+  colorIndex: 8, // indigo-ish
+  roles: const {UserRole.mentee},
 );
 
-/// -------- Mock Events (8) --------
+final User mockMentor = User(
+  id: 'u_mentor_1',
+  email: 'mentor@example.com',
+  firstName: 'Sam',
+  lastName: 'Rivera',
+  image: 'https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=400',
+  colorIndex: 9, // purple-ish
+  roles: const {UserRole.mentor},
+);
+
+/// Build 48 generic users, then add our 2 special users => ~50 total
+final List<User> mockUsers = [
+  for (int i = 0; i < 48; i++) _genUser(i),
+  mockMentee,
+  mockMentor,
+];
+
+/// Quick lookups
+final Map<String, User> mockUsersById = {for (final u in mockUsers) u.id: u};
+
+/// Role data
+final MenteeData mockMenteeData = MenteeData(
+  userId: mockMentee.id,
+  mentor: UserRef(
+    id: mockMentor.id,
+    firstName: mockMentor.firstName,
+    lastName: mockMentor.lastName,
+    image: mockMentor.image,
+    colorIndex: mockMentor.colorIndex,
+  ),
+  totalAttendance: 7,
+  currentStreak: 2,
+);
+
+final MentorData mockMentorData = MentorData(
+  userId: mockMentor.id,
+  mentees: [
+    UserRef(
+      id: mockMentee.id,
+      firstName: mockMentee.firstName,
+      lastName: mockMentee.lastName,
+      image: mockMentee.image,
+      colorIndex: mockMentee.colorIndex,
+    ),
+  ],
+);
+
+final Map<String, MenteeData> mockMenteesByUserId = {
+  mockMenteeData.userId: mockMenteeData,
+};
+
+final Map<String, MentorData> mockMentorsByUserId = {
+  mockMentorData.userId: mockMentorData,
+};
+
+/// (Optional) A single featured mock user you’d been using previously
+final User mockUser = User(
+  id: 'u_featured',
+  email: 'avery.taylor@highaspirations.org',
+  firstName: 'Avery',
+  lastName: 'Taylor',
+  image:
+      'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=512&auto=format&fit=crop',
+  colorIndex: 3,
+  roles: const {},
+);
+
+/// =================================================================================
+/// EVENTS
+/// =================================================================================
+
 final DateTime _now = DateTime.now();
 
 DateTime _onDay(int daysFromNow, {int hour = 18, int minute = 0}) {
@@ -173,7 +254,6 @@ String _img(int i) => _eventImgs[i % _eventImgs.length];
 List<User> _pickAttendees() {
   final count = _rng.nextInt(51); // 0..50
   if (count == 0) return const [];
-  // shuffle copy
   final pool = List<User>.from(mockUsers)..shuffle(_rng);
   return pool.take(count).toList();
 }
@@ -212,7 +292,10 @@ final List<Event> mockEvents = List<Event>.generate(8, (i) {
   );
 });
 
-// 15 mock scoops — all using the provided video URL for now
+/// =================================================================================
+/// SCOOPS
+/// =================================================================================
+
 final List<Scoop> mockScoops = <Scoop>[
   Scoop(
     id: 's1',
