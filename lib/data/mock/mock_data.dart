@@ -1,6 +1,8 @@
 // lib/data/mock/mock_data.dart
 import 'dart:math';
 
+import 'package:ha_mobile/data/mock/mock_users.dart';
+
 import '../../business/events/entities/event.dart';
 import '../../business/scoops/entities/scoop.dart';
 
@@ -149,26 +151,6 @@ User _genUser(int idx) {
     roles: const {}, // generic users have no role by default
   );
 }
-
-/// Special users: one mentee + one mentor (linked)
-final User mockMentee = User(
-  id: 'u_mentee_1',
-  email: 'mentee@example.com',
-  firstName: 'Jordan',
-  lastName: 'Lee',
-  colorIndex: 8, // indigo-ish
-  roles: const {UserRole.mentee},
-);
-
-final User mockMentor = User(
-  id: 'u_mentor_1',
-  email: 'mentor@example.com',
-  firstName: 'Sam',
-  lastName: 'Rivera',
-  image: 'https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=400',
-  colorIndex: 9, // purple-ish
-  roles: const {UserRole.mentor},
-);
 
 /// Build 48 generic users, then add our 2 special users => ~50 total
 final List<User> mockUsers = [

@@ -1,5 +1,6 @@
 // lib/core/session.dart
 import 'package:flutter/foundation.dart';
+import 'package:ha_mobile/data/mock/mock_users.dart';
 import '../data/mock/mock_data.dart';
 import '../business/user/entities/user.dart';
 
