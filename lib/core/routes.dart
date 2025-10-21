@@ -9,4 +9,5 @@ class AppRoutes {
   static const scoopDetail = '/scoop';
   static const checkInScanner = '/check-in';
   static const menteesRoot = '/mentees';
+  static const communityService = '/community-service';
 }

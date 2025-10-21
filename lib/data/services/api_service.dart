@@ -1,6 +1,7 @@
 // lib/data/services/api_service.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../business/community_service/entities/community_service.dart';
 
 class ApiService {
   ApiService._();
@@ -11,6 +12,7 @@ class ApiService {
 
   final Map<String, Set<String>> _registrations = {};
   final Map<String, Set<String>> _checkins = {};
+  final Map<String, List<CommunityService>> _communityServices = {};
 
   Future<void> registerForEvent({
     required String eventId,
@@ -60,5 +62,49 @@ class ApiService {
     await Future.delayed(const Duration(milliseconds: 150));
     final set = _checkins[userId];
     return set != null && set.contains(eventId);
+  }
+
+  /// Creates a new community service entry for a user
+  Future<CommunityService> createCommunityService({
+    required String userId,
+    required String name,
+    required String description,
+    required int hours,
+    String? location,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    final communityService = CommunityService(
+      id: 'cs_${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      description: description,
+      hours: hours,
+      location: location,
+      createdAt: DateTime.now(),
+    );
+
+    final userServices = _communityServices.putIfAbsent(
+      userId,
+      () => <CommunityService>[],
+    );
+    userServices.add(communityService);
+    changes.value++; // notify listeners
+
+    return communityService;
+  }
+
+  /// Gets all community service entries for a user
+  Future<List<CommunityService>> getCommunityServices({
+    required String userId,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return List.from(_communityServices[userId] ?? []);
+  }
+
+  /// Gets the total community service hours for a user
+  Future<int> getTotalCommunityServiceHours({required String userId}) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final services = _communityServices[userId] ?? [];
+    return services.fold<int>(0, (total, service) => total + service.hours);
   }
 }

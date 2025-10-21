@@ -6,6 +6,7 @@ import '../../core/session.dart'; // currentUserKind, CurrentUserKind
 
 import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
+import '../widgets/bottom_sheet_community_service.dart';
 
 // Screens (body-only)
 import 'home_screen.dart';
@@ -17,6 +18,7 @@ import 'calendar_screen.dart';
 import 'scoop_detail_screen.dart';
 import 'check_in_scanner.dart';
 import 'mentees_list_screen.dart';
+import 'community_service_screen.dart';
 
 // Entities
 import '../../business/events/entities/event.dart';
@@ -173,11 +175,25 @@ class _RootShellState extends State<RootShell> {
     key: _profileKey,
     observers: [_profileObs],
     rootName: AppRoutes.profileRoot,
-    onGenerateRoute: (_) => MaterialPageRoute(
-      builder: (_) => const ProfileScreen(),
-      settings: const RouteSettings(name: AppRoutes.profileRoot),
-    ),
-    titleForRoute: (_) => 'Profile',
+    onGenerateRoute: (settings) {
+      switch (settings.name) {
+        case AppRoutes.communityService:
+          return MaterialPageRoute(
+            builder: (_) => const CommunityServiceScreen(),
+            settings: const RouteSettings(name: AppRoutes.communityService),
+          );
+        case AppRoutes.profileRoot:
+        default:
+          return MaterialPageRoute(
+            builder: (_) => const ProfileScreen(),
+            settings: const RouteSettings(name: AppRoutes.profileRoot),
+          );
+      }
+    },
+    titleForRoute: (name) => switch (name) {
+      AppRoutes.communityService => 'Community Service',
+      _ => 'Profile',
+    },
   );
 
   Future<bool> _onWillPop(List<_Tab> tabs) async {
@@ -214,12 +230,17 @@ class _RootShellState extends State<RootShell> {
   bool _shouldHideAppBar(String routeName) =>
       routeName == AppRoutes.checkInScanner;
 
+  bool _shouldHideNavBar(String routeName) =>
+      routeName != AppRoutes.homeRoot &&
+      routeName != AppRoutes.notificationsRoot &&
+      routeName != AppRoutes.menteesRoot &&
+      routeName != AppRoutes.profileRoot;
+
   void _showAddSheet() {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
       builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
         final t = Theme.of(ctx).textTheme;
         return SafeArea(
           child: Padding(
@@ -238,7 +259,12 @@ class _RootShellState extends State<RootShell> {
                   title: const Text('Community Service'),
                   onTap: () {
                     Navigator.pop(ctx);
-                    // TODO: navigate to "add community service" flow
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => const BottomSheetCommunityService(),
+                    );
                   },
                 ),
                 ListTile(
@@ -280,14 +306,14 @@ class _RootShellState extends State<RootShell> {
 
         // Title & app bar visibility
         final title = _titleFor(tabs, _stackIndex);
-        final hideAppBar = _shouldHideAppBar(
-          [
-            _homeRoute,
-            _notiRoute,
-            if (!isMentee) _menteesRoute,
-            _profileRoute,
-          ][_stackIndex],
-        );
+        final currentRoute = [
+          _homeRoute,
+          _notiRoute,
+          if (!isMentee) _menteesRoute,
+          _profileRoute,
+        ][_stackIndex];
+        final hideAppBar = _shouldHideAppBar(currentRoute);
+        final hideNavBar = _shouldHideNavBar(currentRoute);
 
         // Build NavigationBar destinations
         final navItems = <(Widget, Widget, String)>[
@@ -347,21 +373,23 @@ class _RootShellState extends State<RootShell> {
                   ),
               ],
             ),
-            bottomNavigationBar: HANavBar(
-              index: navSelected,
-              onChanged: (tapped) {
-                if (isMentee && tapped == 2) {
-                  // Middle action: show sheet, don't change tab
-                  _showAddSheet();
-                  return;
-                }
-                final nextStack = stackIndexFromNav(tapped);
-                if (_stackIndex != nextStack) {
-                  setState(() => _stackIndex = nextStack);
-                }
-              },
-              tabs: navItems,
-            ),
+            bottomNavigationBar: hideNavBar
+                ? null
+                : HANavBar(
+                    index: navSelected,
+                    onChanged: (tapped) {
+                      if (isMentee && tapped == 2) {
+                        // Middle action: show sheet, don't change tab
+                        _showAddSheet();
+                        return;
+                      }
+                      final nextStack = stackIndexFromNav(tapped);
+                      if (_stackIndex != nextStack) {
+                        setState(() => _stackIndex = nextStack);
+                      }
+                    },
+                    tabs: navItems,
+                  ),
           ),
         );
       },
