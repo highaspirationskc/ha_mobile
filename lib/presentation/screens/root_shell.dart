@@ -1,11 +1,11 @@
 // lib/presentation/screens/root_shell.dart
 import 'package:flutter/material.dart';
-import 'package:ha_mobile/presentation/screens/check_in_scanner.dart';
 
 import '../../core/routes.dart';
+import '../../core/session.dart'; // currentUserKind, CurrentUserKind
+
 import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
-// import '../widgets/bottom_cta.dart'; // keep if you use route-specific CTAs
 
 // Screens (body-only)
 import 'home_screen.dart';
@@ -15,6 +15,8 @@ import 'profile_screen.dart';
 import 'event_detail_screen.dart';
 import 'calendar_screen.dart';
 import 'scoop_detail_screen.dart';
+import 'check_in_scanner.dart';
+import 'mentees_list_screen.dart';
 
 // Entities
 import '../../business/events/entities/event.dart';
@@ -27,219 +29,342 @@ class RootShell extends StatefulWidget {
 }
 
 class _RootShellState extends State<RootShell> {
-  int _index = 0;
+  // We keep a stack index (which tab Navigator is visible). For mentee,
+  // the nav has a non-tab action at index 1, so we map between navIndex<->stackIndex.
+  int _stackIndex = 0;
 
-  // One stable GlobalKey per tab Navigator
+  // Stable keys per potential tab
   final _homeKey = GlobalKey<NavigatorState>();
   final _notiKey = GlobalKey<NavigatorState>();
+  final _menteesKey = GlobalKey<NavigatorState>(); // mentor-only tab
   final _profileKey = GlobalKey<NavigatorState>();
 
-  // Track top route per tab
+  // Track top route names for titles
   String _homeRoute = AppRoutes.homeRoot;
   String _notiRoute = AppRoutes.notificationsRoot;
+  String _menteesRoute = AppRoutes.menteesRoot;
   String _profileRoute = AppRoutes.profileRoot;
 
-  // ---- Post-frame rebuild (always deferred) ----
-  bool _pendingRebuild = false;
-  void _requestRebuild() {
-    if (!mounted || _pendingRebuild) return;
-    _pendingRebuild = true;
+  // deferred setState to avoid setState-during-build
+  bool _pending = false;
+  void _deferRebuild() {
+    if (_pending) return;
+    _pending = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _pendingRebuild = false;
+      _pending = false;
       setState(() {});
     });
   }
 
-  late final _homeObserver = _TabObserver((r, _) {
+  late final _homeObs = _TabObserver((r, _) {
     _homeRoute = r?.settings.name ?? AppRoutes.homeRoot;
-    _requestRebuild();
+    _deferRebuild();
   });
-  late final _notiObserver = _TabObserver((r, _) {
+  late final _notiObs = _TabObserver((r, _) {
     _notiRoute = r?.settings.name ?? AppRoutes.notificationsRoot;
-    _requestRebuild();
+    _deferRebuild();
   });
-  late final _profileObserver = _TabObserver((r, _) {
+  late final _menteesObs = _TabObserver((r, _) {
+    _menteesRoute = r?.settings.name ?? AppRoutes.menteesRoot;
+    _deferRebuild();
+  });
+  late final _profileObs = _TabObserver((r, _) {
     _profileRoute = r?.settings.name ?? AppRoutes.profileRoot;
-    _requestRebuild();
+    _deferRebuild();
   });
 
-  // Build tab descriptors once (stable)
-  late final List<_Tab> _tabs = <_Tab>[
-    _Tab(
-      label: 'Home',
-      icon: const Icon(Icons.home_outlined),
-      selectedIcon: const Icon(Icons.home),
-      key: _homeKey,
-      observers: [_homeObserver],
-      rootName: AppRoutes.homeRoot,
-      onGenerateRoute: (settings) {
-        switch (settings.name) {
-          case AppRoutes.eventDetail:
-            final event = settings.arguments as Event;
-            return MaterialPageRoute(
-              builder: (_) => EventDetailScreen(event: event),
-              settings: const RouteSettings(name: AppRoutes.eventDetail),
-            );
-          case AppRoutes.calendar:
-            return MaterialPageRoute(
-              builder: (_) => const CalendarScreen(),
-              settings: const RouteSettings(name: AppRoutes.calendar),
-            );
-          case AppRoutes.scoopDetail:
-            final scoop = settings.arguments as Scoop;
-            return MaterialPageRoute(
-              builder: (_) => ScoopDetailScreen(scoop: scoop),
-              settings: const RouteSettings(name: AppRoutes.scoopDetail),
-            );
-          case AppRoutes.checkInScanner:
-            final eventId = settings.arguments as String?;
-            return MaterialPageRoute(
-              builder: (_) => CheckInScannerScreen(mockEventId: eventId),
-              settings: const RouteSettings(name: AppRoutes.checkInScanner),
-            );
-          case AppRoutes.homeRoot:
-          default:
-            return MaterialPageRoute(
-              builder: (_) => const HomeScreen(),
-              settings: const RouteSettings(name: AppRoutes.homeRoot),
-            );
-        }
-      },
-      titleForRoute: (name) => switch (name) {
-        AppRoutes.eventDetail => 'Event',
-        AppRoutes.calendar => 'Calendar',
-        AppRoutes.scoopDetail => 'Saturday Scoop',
-        _ => 'High Aspirations',
-      },
-    ),
-    _Tab(
-      label: 'Notifications',
-      icon: const Icon(Icons.notifications_none),
-      selectedIcon: const Icon(Icons.notifications),
-      key: _notiKey,
-      observers: [_notiObserver],
-      rootName: AppRoutes.notificationsRoot,
-      onGenerateRoute: (settings) {
-        switch (settings.name) {
-          case AppRoutes.notificationMessage:
-            final id = settings.arguments as String?;
-            return MaterialPageRoute(
-              builder: (_) => MessageScreen(messageId: id),
-              settings: const RouteSettings(
-                name: AppRoutes.notificationMessage,
-              ),
-            );
-          case AppRoutes.notificationsRoot:
-          default:
-            return MaterialPageRoute(
-              builder: (_) => const NotificationsScreen(),
-              settings: const RouteSettings(name: AppRoutes.notificationsRoot),
-            );
-        }
-      },
-      titleForRoute: (name) => switch (name) {
-        AppRoutes.notificationMessage => 'Message',
-        _ => 'Notifications',
-      },
-    ),
-    _Tab(
-      label: 'Profile',
-      icon: const Icon(Icons.person_outline),
-      selectedIcon: const Icon(Icons.person),
-      key: _profileKey,
-      observers: [_profileObserver],
-      rootName: AppRoutes.profileRoot,
-      onGenerateRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (_) => const ProfileScreen(),
-          settings: const RouteSettings(name: AppRoutes.profileRoot),
-        );
-      },
-      titleForRoute: (_) => 'Profile',
-    ),
-  ];
+  // Build a tab descriptor
+  _Tab _homeTab() => _Tab(
+    label: 'Home',
+    icon: const Icon(Icons.home_outlined),
+    selectedIcon: const Icon(Icons.home),
+    key: _homeKey,
+    observers: [_homeObs],
+    rootName: AppRoutes.homeRoot,
+    onGenerateRoute: (settings) {
+      switch (settings.name) {
+        case AppRoutes.eventDetail:
+          final event = settings.arguments as Event;
+          return MaterialPageRoute(
+            builder: (_) => EventDetailScreen(event: event),
+            settings: const RouteSettings(name: AppRoutes.eventDetail),
+          );
+        case AppRoutes.calendar:
+          return MaterialPageRoute(
+            builder: (_) => const CalendarScreen(),
+            settings: const RouteSettings(name: AppRoutes.calendar),
+          );
+        case AppRoutes.scoopDetail:
+          final scoop = settings.arguments as Scoop;
+          return MaterialPageRoute(
+            builder: (_) => ScoopDetailScreen(scoop: scoop),
+            settings: const RouteSettings(name: AppRoutes.scoopDetail),
+          );
+        case AppRoutes.checkInScanner:
+          return MaterialPageRoute(
+            builder: (_) => const CheckInScannerScreen(),
+            settings: const RouteSettings(name: AppRoutes.checkInScanner),
+          );
+        case AppRoutes.homeRoot:
+        default:
+          return MaterialPageRoute(
+            builder: (_) => const HomeScreen(),
+            settings: const RouteSettings(name: AppRoutes.homeRoot),
+          );
+      }
+    },
+    titleForRoute: (name) => switch (name) {
+      AppRoutes.eventDetail => 'Event',
+      AppRoutes.calendar => 'Calendar',
+      AppRoutes.scoopDetail => 'Saturday Scoop',
+      AppRoutes.checkInScanner => '', // hide app bar; shell will handle
+      _ => 'High Aspirations',
+    },
+  );
 
-  _Tab get _currentTab => _tabs[_index];
-  GlobalKey<NavigatorState> get _currentKey => _currentTab.key;
-  String get _currentRouteName =>
-      [_homeRoute, _notiRoute, _profileRoute][_index];
-  bool get _canGoBack => _currentKey.currentState?.canPop() ?? false;
-  String get _title => _currentTab.titleForRoute(_currentRouteName);
+  _Tab _notiTab() => _Tab(
+    label: 'Notifications',
+    icon: const Icon(Icons.notifications),
+    selectedIcon: const Icon(Icons.notifications),
+    key: _notiKey,
+    observers: [_notiObs],
+    rootName: AppRoutes.notificationsRoot,
+    onGenerateRoute: (settings) {
+      switch (settings.name) {
+        case AppRoutes.notificationMessage:
+          final id = settings.arguments as String?;
+          return MaterialPageRoute(
+            builder: (_) => MessageScreen(messageId: id),
+            settings: const RouteSettings(name: AppRoutes.notificationMessage),
+          );
+        case AppRoutes.notificationsRoot:
+        default:
+          return MaterialPageRoute(
+            builder: (_) => const NotificationsScreen(),
+            settings: const RouteSettings(name: AppRoutes.notificationsRoot),
+          );
+      }
+    },
+    titleForRoute: (name) => switch (name) {
+      AppRoutes.notificationMessage => 'Message',
+      _ => 'Notifications',
+    },
+  );
 
-  bool get _isScannerRoute => _currentRouteName == AppRoutes.checkInScanner;
+  _Tab _menteesTab() => _Tab(
+    label: 'Mentees',
+    icon: const Icon(Icons.group_outlined),
+    selectedIcon: const Icon(Icons.group),
+    key: _menteesKey,
+    observers: [_menteesObs],
+    rootName: AppRoutes.menteesRoot,
+    onGenerateRoute: (_) => MaterialPageRoute(
+      builder: (_) => const MenteesListScreen(),
+      settings: const RouteSettings(name: AppRoutes.menteesRoot),
+    ),
+    titleForRoute: (_) => 'Mentees',
+  );
 
-  Future<bool> _onWillPop() async {
-    if (_canGoBack) {
-      _currentKey.currentState!.maybePop();
+  _Tab _profileTab() => _Tab(
+    label: 'Profile',
+    icon: const Icon(Icons.person_outline),
+    selectedIcon: const Icon(Icons.person),
+    key: _profileKey,
+    observers: [_profileObs],
+    rootName: AppRoutes.profileRoot,
+    onGenerateRoute: (_) => MaterialPageRoute(
+      builder: (_) => const ProfileScreen(),
+      settings: const RouteSettings(name: AppRoutes.profileRoot),
+    ),
+    titleForRoute: (_) => 'Profile',
+  );
+
+  Future<bool> _onWillPop(List<_Tab> tabs) async {
+    final key = [
+      _homeKey,
+      _notiKey,
+      _menteesKey,
+      _profileKey,
+    ].where((k) => tabs.any((t) => t.key == k)).elementAt(_stackIndex);
+    final canPop = key.currentState?.canPop() ?? false;
+    if (canPop) {
+      key.currentState!.maybePop();
       return false;
     }
-    if (_index != 0) {
-      _index = 0;
-      _requestRebuild();
+    if (_stackIndex != 0) {
+      setState(() => _stackIndex = 0);
       return false;
     }
     return true;
   }
 
-  Widget? _buildBottomArea() {
-    // Hide any bottom UI on the scanner route
-    if (_isScannerRoute) return null;
+  String _titleFor(List<_Tab> tabs, int stackIndex) {
+    final names = [
+      _homeRoute,
+      if (tabs.any((t) => t.key == _notiKey)) _notiRoute,
+      if (tabs.any((t) => t.key == _menteesKey)) _menteesRoute,
+      _profileRoute,
+    ];
+    final routeName = names[stackIndex];
+    final tab = tabs[stackIndex];
+    return tab.titleForRoute(routeName);
+  }
 
-    // Show HANavBar only at tab roots
-    if (!_canGoBack) {
-      return HANavBar(
-        index: _index,
-        onChanged: (i) {
-          if (_index == i) return;
-          _index = i;
-          _requestRebuild();
-        },
-        tabs: _tabs.map((t) => (t.icon, t.selectedIcon, t.label)).toList(),
-      );
-    }
+  bool _shouldHideAppBar(String routeName) =>
+      routeName == AppRoutes.checkInScanner;
 
-    // Example: route-specific bottom CTAs (keep commented unless used)
-    // switch (_currentRouteName) {
-    //   case AppRoutes.eventDetail:
-    //     return BottomCTA(label: 'Register', onPressed: () {});
-    //   default:
-    //     return null;
-    // }
-    return null;
+  void _showAddSheet() {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final t = Theme.of(ctx).textTheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add',
+                  style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.volunteer_activism_outlined),
+                  title: const Text('Community Service'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    // TODO: navigate to "add community service" flow
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.checklist_outlined),
+                  title: const Text('Check-In'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).pushNamed(AppRoutes.checkInScanner);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final appBar = _isScannerRoute
-        ? null // HIDE HEADER on scanner
-        : HAAppBar(
-            title: _title,
-            showBack: _canGoBack,
-            onBack: () => _currentKey.currentState!.maybePop(),
-          );
+    return ValueListenableBuilder<CurrentUserKind>(
+      valueListenable: currentUserKind,
+      builder: (context, kind, _) {
+        final isMentee = kind == CurrentUserKind.mentee;
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: Scaffold(
-        appBar: appBar,
-        body: IndexedStack(
-          index: _index,
-          children: [
-            for (final t in _tabs)
-              Navigator(
-                key: t.key,
-                // Provide a single initial route explicitly to avoid duplicates
-                onGenerateInitialRoutes: (_, __) => [
-                  t.onGenerateRoute(RouteSettings(name: t.rootName)),
-                ],
-                onGenerateRoute: t.onGenerateRoute,
-                observers: t.observers,
-              ),
-          ],
-        ),
-        bottomNavigationBar: _buildBottomArea(),
-      ),
+        // Build stack tabs
+        final tabs = <_Tab>[
+          _homeTab(),
+          _notiTab(),
+          if (!isMentee) _menteesTab(), // mentor only
+          _profileTab(),
+        ];
+
+        // Map stackIndex <-> navIndex
+        int navIndexFromStack(int s) => isMentee ? (s >= 1 ? s + 1 : s) : s;
+        int stackIndexFromNav(int n) => isMentee ? (n > 1 ? n - 1 : n) : n;
+
+        final navSelected = navIndexFromStack(_stackIndex);
+
+        // Title & app bar visibility
+        final title = _titleFor(tabs, _stackIndex);
+        final hideAppBar = _shouldHideAppBar(
+          [
+            _homeRoute,
+            _notiRoute,
+            if (!isMentee) _menteesRoute,
+            _profileRoute,
+          ][_stackIndex],
+        );
+
+        // Build NavigationBar destinations
+        final navItems = <(Widget, Widget, String)>[
+          (const Icon(Icons.home_outlined), const Icon(Icons.home), 'Home'),
+          (
+            const Icon(Icons.notifications_none),
+            const Icon(Icons.notifications),
+            'Notifications',
+          ),
+          if (isMentee)
+            (const Icon(Icons.add), const Icon(Icons.add), '')
+          else
+            (
+              const Icon(Icons.group_outlined),
+              const Icon(Icons.group),
+              'Mentees',
+            ),
+          (
+            const Icon(Icons.person_outline),
+            const Icon(Icons.person),
+            'Profile',
+          ),
+        ];
+
+        return WillPopScope(
+          onWillPop: () => _onWillPop(tabs),
+          child: Scaffold(
+            appBar: hideAppBar
+                ? null
+                : HAAppBar(
+                    title: title,
+                    showBack:
+                        ([_homeKey, _notiKey, _menteesKey, _profileKey]
+                            .where((k) => tabs.any((t) => t.key == k))
+                            .elementAt(_stackIndex)
+                            .currentState
+                            ?.canPop() ??
+                        false),
+                    onBack: () =>
+                        ([_homeKey, _notiKey, _menteesKey, _profileKey]
+                                .where((k) => tabs.any((t) => t.key == k))
+                                .elementAt(_stackIndex)
+                                .currentState!)
+                            .maybePop(),
+                  ),
+            body: IndexedStack(
+              index: _stackIndex,
+              children: [
+                for (final t in tabs)
+                  Navigator(
+                    key: t.key,
+                    onGenerateInitialRoutes: (_, __) => [
+                      t.onGenerateRoute(RouteSettings(name: t.rootName)),
+                    ],
+                    onGenerateRoute: t.onGenerateRoute,
+                    observers: t.observers,
+                  ),
+              ],
+            ),
+            bottomNavigationBar: HANavBar(
+              index: navSelected,
+              onChanged: (tapped) {
+                if (isMentee && tapped == 2) {
+                  // Middle action: show sheet, don't change tab
+                  _showAddSheet();
+                  return;
+                }
+                final nextStack = stackIndexFromNav(tapped);
+                if (_stackIndex != nextStack) {
+                  setState(() => _stackIndex = nextStack);
+                }
+              },
+              tabs: navItems,
+            ),
+          ),
+        );
+      },
     );
   }
 }

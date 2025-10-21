@@ -8,4 +8,5 @@ class AppRoutes {
   static const notificationMessage = '/message';
   static const scoopDetail = '/scoop';
   static const checkInScanner = '/check-in';
+  static const menteesRoot = '/mentees';
 }
