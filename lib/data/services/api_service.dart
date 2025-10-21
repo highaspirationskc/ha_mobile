@@ -6,7 +6,9 @@ import '../../business/user/entities/role_mentee.dart';
 import '../../data/mock/mock_data.dart';
 
 class ApiService {
-  ApiService._();
+  ApiService._() {
+    _initializeMockData();
+  }
   static final instance = ApiService._();
 
   /// Broadcast-only: increments whenever registrations/check-ins change.
@@ -15,6 +17,21 @@ class ApiService {
   final Map<String, Set<String>> _registrations = {};
   final Map<String, Set<String>> _checkins = {};
   final Map<String, List<CommunityService>> _communityServices = {};
+
+  /// Initialize with some mock check-in data for testing
+  void _initializeMockData() {
+    // Add some mock check-ins for the mock mentee
+    const mockMenteeId = 'u_mentee_1'; // matches mockMentee.id
+    _checkins[mockMenteeId] = {
+      'evt_1', // Mentor Meetup
+      'evt_2', // Career Workshop
+      'evt_3', // Community Service Day
+      'evt_4', // STEM Lab Tour
+      'evt_5', // College Q&A
+      'evt_6', // Leadership Panel
+      'evt_7', // Hack Night
+    };
+  }
 
   Future<void> registerForEvent({
     required String eventId,
@@ -54,6 +71,10 @@ class ApiService {
     if (!isReg) throw Exception('You must register before checking in.');
     final set = _checkins.putIfAbsent(userId, () => <String>{});
     set.add(eventId);
+    if (kDebugMode) {
+      print('checkInForEvent: $userId checked into $eventId');
+      print('Total check-ins for $userId: ${set.length}');
+    }
     changes.value++; // notify listeners
   }
 
@@ -114,5 +135,17 @@ class ApiService {
   Future<MenteeData?> getMenteeData({required String userId}) async {
     await Future.delayed(const Duration(milliseconds: 150));
     return mockMenteesByUserId[userId];
+  }
+
+  /// Gets the total attendance count (check-ins) for a user
+  Future<int> getTotalAttendance({required String userId}) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final checkins = _checkins[userId];
+    final count = checkins?.length ?? 0;
+    if (kDebugMode) {
+      print('getTotalAttendance for $userId: $count check-ins');
+      print('Check-ins: ${checkins?.toList()}');
+    }
+    return count;
   }
 }

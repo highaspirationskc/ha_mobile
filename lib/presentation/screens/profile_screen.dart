@@ -22,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _colorIndexOverride;
   int _totalCommunityServiceHours = 0;
   int _totalCommunityServiceEvents = 0;
+  int _totalAttendance = 0;
   UserRef? _mentor;
 
   @override
@@ -50,6 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final services = await ApiService.instance.getCommunityServices(
         userId: currentUserId,
       );
+      final attendance = await ApiService.instance.getTotalAttendance(
+        userId: currentUserId,
+      );
       final menteeData = await ApiService.instance.getMenteeData(
         userId: currentUserId,
       );
@@ -57,6 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _totalCommunityServiceHours = hours;
           _totalCommunityServiceEvents = services.length;
+          _totalAttendance = attendance;
           _mentor = menteeData?.mentor;
         });
       }
@@ -179,6 +184,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (currentUserKind.value == CurrentUserKind.mentee &&
                 _mentor != null)
               _buildMentorTile(context, cs, t),
+
+            // Attendance Tile
+            _buildAttendanceTile(context, cs, t),
 
             // Community Service Tile
             CommunityServiceTile(
@@ -318,6 +326,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  Widget _buildAttendanceTile(
+    BuildContext context,
+    ColorScheme cs,
+    TextTheme t,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          // TODO: Navigate to attendance screen when implemented
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Attendance details coming soon!'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Attendance Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(
+                  Icons.event_available,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Attendance Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$_totalAttendance',
+                      style: t.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Attendance',
+                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              // View Button
+              Text(
+                'View',
+                style: t.bodyMedium?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildMentorFallbackAvatar(BuildContext context, ColorScheme cs) {
