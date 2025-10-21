@@ -23,6 +23,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _totalCommunityServiceHours = 0;
   int _totalCommunityServiceEvents = 0;
   int _totalAttendance = 0;
+  int _totalPulses = 0;
+  int _totalPoints = 0;
   UserRef? _mentor;
 
   @override
@@ -54,6 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final attendance = await ApiService.instance.getTotalAttendance(
         userId: currentUserId,
       );
+      final pulses = await ApiService.instance.getPulses(userId: currentUserId);
       final menteeData = await ApiService.instance.getMenteeData(
         userId: currentUserId,
       );
@@ -62,6 +65,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _totalCommunityServiceHours = hours;
           _totalCommunityServiceEvents = services.length;
           _totalAttendance = attendance;
+          _totalPulses = pulses.length;
+          _totalPoints =
+              attendance +
+              services.length; // Points = attendance + community service events
           _mentor = menteeData?.mentor;
         });
       }
@@ -155,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Role chip
+                  // Points chip
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -167,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       border: Border.all(color: cs.primary.withOpacity(0.20)),
                     ),
                     child: Text(
-                      currentUserRoleLabel, // from session.dart
+                      '$_totalPoints points',
                       style: t.labelMedium?.copyWith(
                         color: cs.onPrimaryContainer,
                         fontWeight: FontWeight.w600,
@@ -187,6 +194,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Attendance Tile
             _buildAttendanceTile(context, cs, t),
+
+            // Pulse Tile
+            _buildPulseTile(context, cs, t),
 
             // Community Service Tile
             CommunityServiceTile(
@@ -391,6 +401,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 2),
                     Text(
                       'Attendance',
+                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              // View Button
+              Text(
+                'View',
+                style: t.bodyMedium?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPulseTile(BuildContext context, ColorScheme cs, TextTheme t) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed(AppRoutes.pulses);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Pulse Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(Icons.favorite, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 16),
+              // Pulse Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$_totalPulses',
+                      style: t.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pulses',
                       style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                     ),
                   ],

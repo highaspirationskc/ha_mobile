@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../business/community_service/entities/community_service.dart';
 import '../../business/user/entities/role_mentee.dart';
+import '../../business/pulse/entities/pulse.dart';
 import '../../data/mock/mock_data.dart';
 
 class ApiService {
@@ -17,6 +18,7 @@ class ApiService {
   final Map<String, Set<String>> _registrations = {};
   final Map<String, Set<String>> _checkins = {};
   final Map<String, List<CommunityService>> _communityServices = {};
+  final Map<String, List<Pulse>> _pulses = {};
 
   /// Initialize with some mock check-in data for testing
   void _initializeMockData() {
@@ -147,5 +149,49 @@ class ApiService {
       print('Check-ins: ${checkins?.toList()}');
     }
     return count;
+  }
+
+  /// Creates a new pulse entry for a user
+  Future<Pulse> createPulse({
+    required String userId,
+    required int rating,
+    required String highlight,
+    required String challenge,
+    required String thoughts,
+    required List<SupportTopic> supportTopics,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    final pulse = Pulse(
+      id: 'pulse_${DateTime.now().millisecondsSinceEpoch}',
+      userId: userId,
+      createdAt: DateTime.now(),
+      rating: rating,
+      highlight: highlight,
+      challenge: challenge,
+      thoughts: thoughts,
+      supportTopics: supportTopics,
+    );
+
+    final userPulses = _pulses.putIfAbsent(userId, () => <Pulse>[]);
+    userPulses.add(pulse);
+    changes.value++; // notify listeners
+
+    return pulse;
+  }
+
+  /// Gets all pulse entries for a user
+  Future<List<Pulse>> getPulses({required String userId}) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return List.from(_pulses[userId] ?? []);
+  }
+
+  /// Gets the latest pulse for a user
+  Future<Pulse?> getLatestPulse({required String userId}) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final pulses = _pulses[userId] ?? [];
+    if (pulses.isEmpty) return null;
+    pulses.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return pulses.first;
   }
 }

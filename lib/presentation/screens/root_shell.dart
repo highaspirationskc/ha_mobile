@@ -7,6 +7,7 @@ import '../../core/session.dart'; // currentUserKind, CurrentUserKind
 import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
 import '../widgets/bottom_sheet_community_service.dart';
+import '../widgets/bottom_sheet_pulse.dart';
 
 // Screens (body-only)
 import 'home_screen.dart';
@@ -19,6 +20,7 @@ import 'scoop_detail_screen.dart';
 import 'check_in_scanner.dart';
 import 'mentees_list_screen.dart';
 import 'community_service_screen.dart';
+import 'pulses_screen.dart';
 
 // Entities
 import '../../business/events/entities/event.dart';
@@ -182,6 +184,11 @@ class _RootShellState extends State<RootShell> {
             builder: (_) => const CommunityServiceScreen(),
             settings: const RouteSettings(name: AppRoutes.communityService),
           );
+        case AppRoutes.pulses:
+          return MaterialPageRoute(
+            builder: (_) => const PulsesScreen(),
+            settings: const RouteSettings(name: AppRoutes.pulses),
+          );
         case AppRoutes.profileRoot:
         default:
           return MaterialPageRoute(
@@ -192,6 +199,7 @@ class _RootShellState extends State<RootShell> {
     },
     titleForRoute: (name) => switch (name) {
       AppRoutes.communityService => 'Community Service',
+      AppRoutes.pulses => 'Pulses',
       _ => 'Profile',
     },
   );
@@ -268,11 +276,16 @@ class _RootShellState extends State<RootShell> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.checklist_outlined),
-                  title: const Text('Check-In'),
+                  leading: const Icon(Icons.favorite_outline),
+                  title: const Text('What\'s the Pulse?'),
                   onTap: () {
                     Navigator.pop(ctx);
-                    Navigator.of(context).pushNamed(AppRoutes.checkInScanner);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => const BottomSheetPulse(),
+                    );
                   },
                 ),
               ],

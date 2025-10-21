@@ -10,4 +10,5 @@ class AppRoutes {
   static const checkInScanner = '/check-in';
   static const menteesRoot = '/mentees';
   static const communityService = '/community-service';
+  static const pulses = '/pulses';
 }
