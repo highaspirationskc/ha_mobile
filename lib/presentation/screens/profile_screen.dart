@@ -1,8 +1,11 @@
 // lib/presentation/screens/profile_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/session.dart';
 import '../../core/routes.dart';
 import '../../business/user/entities/user.dart';
+import '../../business/user/entities/user_refs.dart';
 import '../../data/services/api_service.dart';
 import '../widgets/avatar.dart';
 import '../widgets/community_service_tile.dart';
@@ -19,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _colorIndexOverride;
   int _totalCommunityServiceHours = 0;
   int _totalCommunityServiceEvents = 0;
+  UserRef? _mentor;
 
   @override
   void initState() {
@@ -46,10 +50,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final services = await ApiService.instance.getCommunityServices(
         userId: currentUserId,
       );
+      final menteeData = await ApiService.instance.getMenteeData(
+        userId: currentUserId,
+      );
       if (mounted) {
         setState(() {
           _totalCommunityServiceHours = hours;
           _totalCommunityServiceEvents = services.length;
+          _mentor = menteeData?.mentor;
         });
       }
     } catch (e) {
@@ -167,6 +175,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 32),
 
+            // Mentor Tile (only show for mentees with assigned mentors)
+            if (currentUserKind.value == CurrentUserKind.mentee &&
+                _mentor != null)
+              _buildMentorTile(context, cs, t),
+
             // Community Service Tile
             CommunityServiceTile(
               totalHours: _totalCommunityServiceHours,
@@ -186,6 +199,144 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildMentorTile(BuildContext context, ColorScheme cs, TextTheme t) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _callMentor(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Mentor Avatar
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (_mentor!.image != null && _mentor!.image!.isNotEmpty)
+                        Image(
+                          image: _mentor!.image!.startsWith('http')
+                              ? NetworkImage(_mentor!.image!) as ImageProvider
+                              : AssetImage(_mentor!.image!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _buildMentorFallbackAvatar(context, cs),
+                        )
+                      else
+                        _buildMentorFallbackAvatar(context, cs),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Mentor Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mentor',
+                      style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _mentor!.displayName,
+                      style: t.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Phone Number (placeholder for now)
+              Text(
+                '(620) 555-1234',
+                style: t.bodyMedium?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _callMentor(BuildContext context) async {
+    const phoneNumber =
+        '(620) 555-1234'; // TODO: Make this dynamic from mentor data
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        // Fallback: copy phone number to clipboard
+        await Clipboard.setData(ClipboardData(text: phoneNumber));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Phone number copied to clipboard: $phoneNumber'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback: copy phone number to clipboard
+      await Clipboard.setData(ClipboardData(text: phoneNumber));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Phone number copied to clipboard: $phoneNumber'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildMentorFallbackAvatar(BuildContext context, ColorScheme cs) {
+    final f = (_mentor!.firstName ?? '').trim();
+    final l = (_mentor!.lastName ?? '').trim();
+    final initials =
+        (f.isNotEmpty ? f.characters.first : '') +
+        (l.isNotEmpty ? l.characters.first : '');
+
+    return Container(
+      color: cs.surfaceVariant,
+      alignment: Alignment.center,
+      child: Text(
+        (initials.isEmpty ? 'M' : initials).toUpperCase(),
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: cs.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }

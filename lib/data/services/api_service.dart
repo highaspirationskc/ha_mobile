@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../business/community_service/entities/community_service.dart';
+import '../../business/user/entities/role_mentee.dart';
+import '../../data/mock/mock_data.dart';
 
 class ApiService {
   ApiService._();
@@ -106,5 +108,11 @@ class ApiService {
     await Future.delayed(const Duration(milliseconds: 200));
     final services = _communityServices[userId] ?? [];
     return services.fold<int>(0, (total, service) => total + service.hours);
+  }
+
+  /// Gets mentee data for a user
+  Future<MenteeData?> getMenteeData({required String userId}) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    return mockMenteesByUserId[userId];
   }
 }
