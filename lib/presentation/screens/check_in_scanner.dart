@@ -271,54 +271,42 @@ class _ConfirmSheetState extends State<_ConfirmSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Constrained preview so AspectRatio has finite width
-          Row(
+          // Image on top
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: _SheetImage(src: e.image),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Event details below
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 140,
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: _SheetImage(src: e.image),
-                  ),
-                ),
+              Text(
+                e.name,
+                style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      e.name,
-                      style: t.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 2,
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 18,
+                    color: cs.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${formatLongDate(e.dateTime)}  •  ${formatTime(e.dateTime)}',
+                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 18,
-                          color: cs.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${formatLongDate(e.dateTime)}  •  ${formatTime(e.dateTime)}',
-                            style: t.bodyMedium?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),

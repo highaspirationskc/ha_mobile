@@ -146,12 +146,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
     final e = widget.event;
 
-    // Prepare attendees for the strip
-    final List<User> shown = e.attendees.take(6).toList(); // show up to 6 here
-    final int extra = (e.attendeeCount - shown.length).clamp(0, 999);
+    // Show all attendees in a grid
+    final List<User> allAttendees = e.attendees;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -219,7 +217,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              _AttendeesStrip(users: shown, extraCount: extra),
+              _AttendeesGrid(attendees: allAttendees),
               const SizedBox(height: 24),
 
               // ---- Actions ----
@@ -371,69 +369,73 @@ class _SectionDivider extends StatelessWidget {
   }
 }
 
-/// Compact horizontally-overlapped avatar strip with "+N" badge
-class _AttendeesStrip extends StatelessWidget {
-  final List<User> users; // shown
-  final int extraCount; // remaining attendees
-  const _AttendeesStrip({required this.users, required this.extraCount});
+/// Grid layout showing attendees with show more/less functionality
+class _AttendeesGrid extends StatefulWidget {
+  final List<User> attendees;
+  const _AttendeesGrid({required this.attendees});
+
+  @override
+  State<_AttendeesGrid> createState() => _AttendeesGridState();
+}
+
+class _AttendeesGridState extends State<_AttendeesGrid> {
+  bool _showAll = false;
+  static const int _maxInitial = 10;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
 
-    // 24px avatars with 6px overlap => 18px step
-    final width = users.isEmpty ? 0.0 : (24 + (users.length - 1) * 18.0);
+    if (widget.attendees.isEmpty) {
+      return Text(
+        'No attendees yet',
+        style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+      );
+    }
 
-    return Row(
+    final attendeesToShow = _showAll
+        ? widget.attendees
+        : widget.attendees.take(_maxInitial).toList();
+    final remainingCount = widget.attendees.length - _maxInitial;
+
+    return Column(
       children: [
-        if (users.isNotEmpty)
-          SizedBox(
-            height: 24,
-            width: width,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                for (int i = 0; i < users.length; i++)
-                  Positioned(
-                    left: i * 18.0,
-                    child: AvatarMini(imageUrl: users[i].image ?? ''),
-                  ),
-              ],
-            ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 5,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1,
           ),
-
-        if (users.isNotEmpty && extraCount > 0) const SizedBox(width: 8),
-
-        if (extraCount > 0)
-          Container(
-            height: 24,
-            constraints: const BoxConstraints(minWidth: 24),
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              color: cs.primary,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white,
-                width: 2,
-                strokeAlign: BorderSide.strokeAlignOutside,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '+$extraCount',
-              style: t.labelSmall?.copyWith(
-                color: cs.onPrimary,
-                fontWeight: FontWeight.w700,
+          itemCount: attendeesToShow.length,
+          itemBuilder: (context, index) {
+            final user = attendeesToShow[index];
+            return AvatarMini(imageUrl: user.image ?? '', size: 48);
+          },
+        ),
+        if (widget.attendees.length > _maxInitial) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  _showAll = !_showAll;
+                });
+              },
+              child: Text(
+                _showAll ? 'Show Less' : 'Show More (+$remainingCount)',
+                style: t.bodyMedium?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
-
-        if (users.isEmpty && extraCount == 0)
-          Text(
-            'No attendees yet',
-            style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-          ),
+        ],
       ],
     );
   }

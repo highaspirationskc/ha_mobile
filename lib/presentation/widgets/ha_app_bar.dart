@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final Widget? titleWidget;
   final bool showBack;
   final VoidCallback? onBack;
   final List<Widget>? actions;
@@ -9,6 +10,7 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
   const HAAppBar({
     super.key,
     required this.title,
+    this.titleWidget,
     this.showBack = false,
     this.onBack,
     this.actions,
@@ -27,8 +29,10 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
               tooltip: 'Back',
             )
           : null,
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      centerTitle: false,
+      title:
+          titleWidget ??
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      centerTitle: true,
       actions: actions,
     );
   }

@@ -8,6 +8,7 @@ class Message {
   final User author;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final bool read;
 
   const Message({
     required this.id,
@@ -16,6 +17,7 @@ class Message {
     required this.author,
     required this.createdAt,
     this.updatedAt,
+    this.read = false,
   });
 
   Message copyWith({
@@ -25,6 +27,7 @@ class Message {
     User? author,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? read,
   }) {
     return Message(
       id: id ?? this.id,
@@ -33,6 +36,7 @@ class Message {
       author: author ?? this.author,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      read: read ?? this.read,
     );
   }
 
@@ -45,16 +49,25 @@ class Message {
         other.message == message &&
         other.author == author &&
         other.createdAt == createdAt &&
-        other.updatedAt == updatedAt;
+        other.updatedAt == updatedAt &&
+        other.read == read;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, subject, message, author, createdAt, updatedAt);
+    return Object.hash(
+      id,
+      subject,
+      message,
+      author,
+      createdAt,
+      updatedAt,
+      read,
+    );
   }
 
   @override
   String toString() {
-    return 'Message(id: $id, subject: $subject, message: $message, author: $author, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Message(id: $id, subject: $subject, message: $message, author: $author, createdAt: $createdAt, updatedAt: $updatedAt, read: $read)';
   }
 }

@@ -161,9 +161,6 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Share something positive that happened...',
-                    // border: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(12),
-                    // ),
                     filled: true,
                     fillColor: cs.surfaceVariant.withOpacity(0.3),
                   ),
@@ -187,9 +184,6 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Describe any difficulties you encountered...',
-                    // border: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(12),
-                    // ),
                     filled: true,
                     fillColor: cs.surfaceVariant.withOpacity(0.3),
                   ),
@@ -213,9 +207,6 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Share any thoughts or concerns...',
-                    // border: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(12),
-                    // ),
                     filled: true,
                     fillColor: cs.surfaceVariant.withOpacity(0.3),
                   ),

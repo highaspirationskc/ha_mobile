@@ -21,9 +21,10 @@ class ListTileMessage extends StatelessWidget {
     final authorName = _fullName(author);
     final showMentorChip = _isFromMyMentor(author);
     final rel = _relativeTime(message.updatedAt ?? message.createdAt);
+    final isRead = message.read;
 
     return Material(
-      color: Colors.white,
+      color: isRead ? cs.surface : Colors.white,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

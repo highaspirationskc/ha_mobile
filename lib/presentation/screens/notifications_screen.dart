@@ -16,13 +16,32 @@ class NotificationsScreen extends StatelessWidget {
     // Group messages by time period
     final groupedMessages = _groupMessagesByTime(sortedMessages);
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _getTotalItemCount(groupedMessages),
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return _buildItem(context, index, groupedMessages);
-      },
+    return Column(
+      children: [
+        // Notifications header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Text(
+            'Notifications',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+        // Messages list
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _getTotalItemCount(groupedMessages),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              return _buildItem(context, index, groupedMessages);
+            },
+          ),
+        ),
+      ],
     );
   }
 

@@ -26,6 +26,9 @@ import 'pulses_screen.dart';
 import '../../business/events/entities/event.dart';
 import '../../business/scoops/entities/scoop.dart';
 
+// Mock data
+import '../../data/mock/mock_messages.dart';
+
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
   @override
@@ -123,6 +126,7 @@ class _RootShellState extends State<RootShell> {
       AppRoutes.calendar => 'Calendar',
       AppRoutes.scoopDetail => 'Saturday Scoop',
       AppRoutes.checkInScanner => '', // hide app bar; shell will handle
+      AppRoutes.homeRoot => 'Hello ${currentUser.firstName ?? 'there'}',
       _ => 'High Aspirations',
     },
   );
@@ -328,12 +332,15 @@ class _RootShellState extends State<RootShell> {
         final hideAppBar = _shouldHideAppBar(currentRoute);
         final hideNavBar = _shouldHideNavBar(currentRoute);
 
+        // Count unread messages for notification badge
+        final unreadCount = mockMessages.where((msg) => !msg.read).length;
+
         // Build NavigationBar destinations
         final navItems = <(Widget, Widget, String)>[
           (const Icon(Icons.home_outlined), const Icon(Icons.home), 'Home'),
           (
-            const Icon(Icons.notifications_outlined),
-            const Icon(Icons.notifications),
+            _buildNotificationIcon(Icons.notifications_outlined, unreadCount),
+            _buildNotificationIcon(Icons.notifications, unreadCount),
             'Notifications',
           ),
           if (isMentee)
@@ -358,6 +365,28 @@ class _RootShellState extends State<RootShell> {
                 ? null
                 : HAAppBar(
                     title: title,
+                    titleWidget: currentRoute == AppRoutes.homeRoot
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Hello ${currentUser.firstName ?? 'there'}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const Text(
+                                'Welcome back!',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          )
+                        : null,
                     showBack:
                         ([_homeKey, _notiKey, _menteesKey, _profileKey]
                             .where((k) => tabs.any((t) => t.key == k))
@@ -406,6 +435,31 @@ class _RootShellState extends State<RootShell> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildNotificationIcon(IconData icon, int unreadCount) {
+    if (unreadCount == 0) {
+      return Icon(icon);
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
