@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ha_mobile/presentation/widgets/button_long.dart';
+import 'package:ha_mobile/presentation/widgets/button_long_outlined.dart';
 import '../../data/services/api_service.dart';
 import '../../core/session.dart';
 
@@ -253,64 +255,16 @@ class _BottomSheetCommunityServiceState
               const SizedBox(height: 32),
 
               // Save Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveCommunityService,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: cs.primary,
-                    foregroundColor: cs.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              cs.onPrimary,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          'Save',
-                          style: t.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: cs.onPrimary,
-                          ),
-                        ),
-                ),
+              ButtonLong(
+                label: 'Save',
+                onPressed: _isLoading ? null : _saveCommunityService,
               ),
-
               const SizedBox(height: 12),
-
-              // Cancel Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: cs.onSurface,
-                    side: BorderSide(color: cs.outline),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Cancel',
-                    style: t.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                ),
+              ButtonLongOutlined(
+                label: 'Cancel',
+                onPressed: _isLoading
+                    ? null
+                    : () => Navigator.of(context).pop(),
               ),
             ],
           ),

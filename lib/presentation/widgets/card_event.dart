@@ -135,97 +135,106 @@ class _EventCardState extends State<EventCard> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: widget.onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image (inset, rounded, 16:9)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: _HeaderImage(src: e.image),
+        child: Container(
+          height: 280,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image (inset, rounded, 16:9)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: _HeaderImage(src: e.image),
+                  ),
                 ),
               ),
-            ),
 
-            // Content
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title + Registered badge
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          e.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: t.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                      // Title + Registered badge
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              e.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                        ),
+                          if (_registered) ...[
+                            const SizedBox(width: 8),
+                            const _RegisteredBadgeTiny(),
+                          ],
+                        ],
                       ),
-                      if (_registered) ...[
-                        const SizedBox(width: 8),
-                        const _RegisteredBadgeTiny(),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 6),
+                      const SizedBox(height: 6),
 
-                  // Date/time & Location
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 16,
-                        color: cs.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${formatShortDate(e.dateTime)} • ${formatTime(e.dateTime)}',
-                        style: t.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(Icons.place_outlined, size: 16, color: cs.primary),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          e.location,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: t.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
+                      // Date/time & Location
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 16,
+                            color: cs.primary,
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${formatShortDate(e.dateTime)} • ${formatTime(e.dateTime)}',
+                            style: t.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.place_outlined,
+                            size: 16,
+                            color: cs.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              e.location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.bodySmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                  // Attendees + action
-                  Row(
-                    children: [
-                      _AttendingStripUsers(users: shown, extraCount: extra),
-                      const Spacer(),
-                      ButtonRoundSmall(
-                        label: actionLabel,
-                        onPressed: actionEnabled ? _onPrimaryAction : null,
-                        isLoading: actionLoading,
+                      // Attendees + action
+                      Row(
+                        children: [
+                          _AttendingStripUsers(users: shown, extraCount: extra),
+                          const Spacer(),
+                          ButtonRoundSmall(
+                            label: actionLabel,
+                            onPressed: actionEnabled ? _onPrimaryAction : null,
+                            isLoading: actionLoading,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,7 @@
 // lib/presentation/widgets/bottom_sheet_pulse.dart
 import 'package:flutter/material.dart';
+import 'package:ha_mobile/presentation/widgets/button_long.dart';
+import 'package:ha_mobile/presentation/widgets/button_long_outlined.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../core/session.dart';
 import '../../data/services/api_service.dart';
@@ -100,8 +102,6 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                 // Header
                 Row(
                   children: [
-                    Icon(Icons.favorite, color: cs.primary, size: 28),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,10 +120,6 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
@@ -165,9 +161,9 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Share something positive that happened...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    // border: OutlineInputBorder(
+                    //   borderRadius: BorderRadius.circular(12),
+                    // ),
                     filled: true,
                     fillColor: cs.surfaceVariant.withOpacity(0.3),
                   ),
@@ -191,9 +187,9 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Describe any difficulties you encountered...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    // border: OutlineInputBorder(
+                    //   borderRadius: BorderRadius.circular(12),
+                    // ),
                     filled: true,
                     fillColor: cs.surfaceVariant.withOpacity(0.3),
                   ),
@@ -217,9 +213,9 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Share any thoughts or concerns...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    // border: OutlineInputBorder(
+                    //   borderRadius: BorderRadius.circular(12),
+                    // ),
                     filled: true,
                     fillColor: cs.surfaceVariant.withOpacity(0.3),
                   ),
@@ -263,38 +259,17 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
                 const SizedBox(height: 32),
 
                 // Submit Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitPulse,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: cs.primary,
-                      foregroundColor: cs.onPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : Text(
-                            'Submit Pulse',
-                            style: t.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
+                ButtonLong(
+                  label: 'Save Pulse',
+                  onPressed: _isSubmitting ? null : _submitPulse,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                ButtonLongOutlined(
+                  label: 'Cancel',
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                ),
               ],
             ),
           ),

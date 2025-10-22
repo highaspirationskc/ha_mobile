@@ -312,8 +312,8 @@ class _RootShellState extends State<RootShell> {
         ];
 
         // Map stackIndex <-> navIndex
-        int navIndexFromStack(int s) => isMentee ? (s >= 1 ? s + 1 : s) : s;
-        int stackIndexFromNav(int n) => isMentee ? (n > 1 ? n - 1 : n) : n;
+        int navIndexFromStack(int s) => isMentee ? (s >= 2 ? s + 1 : s) : s;
+        int stackIndexFromNav(int n) => isMentee ? (n > 2 ? n - 1 : n) : n;
 
         final navSelected = navIndexFromStack(_stackIndex);
 
@@ -332,7 +332,7 @@ class _RootShellState extends State<RootShell> {
         final navItems = <(Widget, Widget, String)>[
           (const Icon(Icons.home_outlined), const Icon(Icons.home), 'Home'),
           (
-            const Icon(Icons.notifications_none),
+            const Icon(Icons.notifications_outlined),
             const Icon(Icons.notifications),
             'Notifications',
           ),

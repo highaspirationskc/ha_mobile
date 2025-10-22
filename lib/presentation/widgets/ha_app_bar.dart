@@ -17,6 +17,8 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
       automaticallyImplyLeading: false, // shell controls the back button
       leading: showBack
           ? IconButton(
@@ -25,10 +27,7 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
               tooltip: 'Back',
             )
           : null,
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       centerTitle: false,
       actions: actions,
     );

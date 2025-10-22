@@ -14,8 +14,6 @@ class HANavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return DecoratedBox(
       decoration: BoxDecoration(
         // soft shadow from the top edge of the bar
@@ -29,23 +27,33 @@ class HANavBar extends StatelessWidget {
         ],
       ),
       child: Material(
-        color: cs.surface,
+        color: Colors.white,
         surfaceTintColor: Colors
             .transparent, // avoid the Material3 tint washing out your surface
-        child: NavigationBar(
-          selectedIndex: index,
-          backgroundColor: Colors
-              .transparent, // use the Material color above, keep this transparent
-          elevation: 0, // shadow handled by the BoxShadow above
-          onDestinationSelected: onChanged,
-          destinations: [
-            for (final t in tabs)
-              NavigationDestination(
-                icon: t.$1,
-                selectedIcon: t.$2,
-                label: t.$3,
-              ),
-          ],
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            navigationBarTheme: NavigationBarThemeData(
+              indicatorColor: Colors.transparent, // Remove selected indicator
+              labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                return const TextStyle(fontSize: 0); // Hide labels completely
+              }),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: index,
+            backgroundColor: Colors
+                .transparent, // use the Material color above, keep this transparent
+            elevation: 0, // shadow handled by the BoxShadow above
+            onDestinationSelected: onChanged,
+            destinations: [
+              for (final t in tabs)
+                NavigationDestination(
+                  icon: t.$1,
+                  selectedIcon: t.$2,
+                  label: '', // Remove labels
+                ),
+            ],
+          ),
         ),
       ),
     );
