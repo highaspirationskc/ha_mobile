@@ -252,6 +252,7 @@ class _RootShellState extends State<RootShell> {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
+      backgroundColor: Colors.white,
       builder: (ctx) {
         final t = Theme.of(ctx).textTheme;
         return SafeArea(
@@ -274,7 +275,7 @@ class _RootShellState extends State<RootShell> {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: Colors.white,
                       builder: (context) => const BottomSheetCommunityService(),
                     );
                   },
@@ -287,7 +288,7 @@ class _RootShellState extends State<RootShell> {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: Colors.white,
                       builder: (context) => const BottomSheetPulse(),
                     );
                   },

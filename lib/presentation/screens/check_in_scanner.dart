@@ -84,6 +84,7 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

@@ -28,7 +28,14 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: onBack,
               tooltip: 'Back',
             )
-          : null,
+          : Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Image.asset(
+                '/logos/HA_logo_darkblue.png',
+                height: 32,
+                fit: BoxFit.contain,
+              ),
+            ),
       title:
           titleWidget ??
           Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),

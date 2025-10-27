@@ -7,10 +7,8 @@ class Event {
   final DateTime dateTime;
   final String location;
 
-  /// Either a network URL or an `assets/...` path
   final String image;
 
-  /// NEW: people attending this event
   final List<User> attendees;
 
   const Event({
