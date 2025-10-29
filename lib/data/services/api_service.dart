@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import '../../business/community_service/entities/community_service.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../business/pulse/entities/pulse.dart';
+import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../data/mock/mock_data.dart';
+import '../mock/mock_leaderboard.dart';
 
 class ApiService {
   ApiService._() {
@@ -193,5 +195,11 @@ class ApiService {
     if (pulses.isEmpty) return null;
     pulses.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return pulses.first;
+  }
+
+  /// Gets the leaderboard with all teams info and top 10 mentees by points
+  Future<Leaderboard> getLeaderboard() async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    return getMockLeaderboard();
   }
 }

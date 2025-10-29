@@ -21,6 +21,7 @@ import 'check_in_scanner.dart';
 import 'mentees_list_screen.dart';
 import 'community_service_screen.dart';
 import 'pulses_screen.dart';
+import 'team_screen.dart';
 
 // Entities
 import '../../business/events/entities/event.dart';
@@ -193,6 +194,11 @@ class _RootShellState extends State<RootShell> {
             builder: (_) => const PulsesScreen(),
             settings: const RouteSettings(name: AppRoutes.pulses),
           );
+        case AppRoutes.team:
+          return MaterialPageRoute(
+            builder: (_) => const TeamScreen(),
+            settings: const RouteSettings(name: AppRoutes.team),
+          );
         case AppRoutes.profileRoot:
         default:
           return MaterialPageRoute(
@@ -204,6 +210,7 @@ class _RootShellState extends State<RootShell> {
     titleForRoute: (name) => switch (name) {
       AppRoutes.communityService => 'Community Service',
       AppRoutes.pulses => 'Pulses',
+      AppRoutes.team => 'Team',
       _ => 'Profile',
     },
   );

@@ -12,6 +12,7 @@ import '../../business/user/entities/user_role.dart';
 import '../../business/user/entities/user_refs.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../business/user/entities/role_mentor.dart';
+import '../../business/teams/entities/team.dart';
 
 /// =================================================================================
 /// USERS
@@ -171,6 +172,14 @@ final MenteeData mockMenteeData = MenteeData(
     lastName: mockMentor.lastName,
     image: mockMentor.image,
     colorIndex: mockMentor.colorIndex,
+  ),
+  teamId: 'team_blue',
+  teamSummary: const TeamSummary(
+    id: 'team_blue',
+    name: 'Ocean Wolves',
+    color: TeamColor.blue,
+    points: 245,
+    rank: 2,
   ),
   totalAttendance: 7,
   currentStreak: 2,

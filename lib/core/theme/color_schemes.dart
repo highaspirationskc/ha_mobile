@@ -6,8 +6,14 @@ ColorScheme buildLightScheme({Color seed = kBrandSeed}) {
     seedColor: seed,
     brightness: Brightness.light,
   );
+
+  // Create a darker version of the primary color
+  final darkerPrimary = base.primary.withOpacity(0.12);
+
   return base.copyWith(
     surface: kBgLight, // use surface instead of background
+    surfaceContainerHighest:
+        darkerPrimary, // Custom color for team screen background
   );
 }
 
@@ -16,8 +22,14 @@ ColorScheme buildDarkScheme({Color seed = kBrandSeed}) {
     seedColor: seed,
     brightness: Brightness.dark,
   );
+
+  // Create a darker version of the primary color for dark theme
+  final darkerPrimary = base.primary.withOpacity(0.15);
+
   return base.copyWith(
     surface: kBgDark, // use surface instead of background
+    surfaceContainerHighest:
+        darkerPrimary, // Custom color for team screen background
   );
 }
 

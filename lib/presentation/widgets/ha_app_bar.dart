@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/brand_colors.dart';
 
 class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -18,13 +19,21 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isTeamRoute = title == 'Team';
+
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: isTeamRoute ? cs.surfaceContainerHighest : Colors.white,
+      foregroundColor: isTeamRoute ? kFontDark : null,
       surfaceTintColor: Colors.transparent,
+      elevation: 0,
       automaticallyImplyLeading: false, // shell controls the back button
       leading: showBack
           ? IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: Icon(
+                Icons.arrow_back,
+                color: isTeamRoute ? kFontDark : null,
+              ),
               onPressed: onBack,
               tooltip: 'Back',
             )
@@ -38,7 +47,13 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
       title:
           titleWidget ??
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isTeamRoute ? kFontDark : null,
+            ),
+          ),
       centerTitle: true,
       actions: actions,
     );

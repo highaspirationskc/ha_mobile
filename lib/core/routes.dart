@@ -11,4 +11,5 @@ class AppRoutes {
   static const menteesRoot = '/mentees';
   static const communityService = '/community-service';
   static const pulses = '/pulses';
+  static const team = '/team';
 }

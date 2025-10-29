@@ -9,6 +9,8 @@ import '../../business/user/entities/user_refs.dart';
 import '../../data/services/api_service.dart';
 import '../widgets/avatar.dart';
 import '../widgets/community_service_tile.dart';
+import '../widgets/team_tile.dart';
+import '../../business/user/entities/role_mentee.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,6 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _totalPulses = 0;
   int _totalPoints = 0;
   UserRef? _mentor;
+  TeamSummary? _teamSummary;
 
   @override
   void initState() {
@@ -70,6 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               attendance +
               services.length; // Points = attendance + community service events
           _mentor = menteeData?.mentor;
+          _teamSummary = menteeData?.teamSummary;
         });
       }
     } catch (e) {
@@ -194,6 +198,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Attendance Tile
             _buildAttendanceTile(context, cs, t),
+
+            // Team Tile (only show for mentees with team data)
+            if (currentUserKind.value == CurrentUserKind.mentee)
+              TeamTile(
+                teamSummary: _teamSummary,
+                onTap: () {
+                  Navigator.of(context).pushNamed(AppRoutes.team);
+                },
+              ),
 
             // Pulse Tile
             _buildPulseTile(context, cs, t),
