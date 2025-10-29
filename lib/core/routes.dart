@@ -1,6 +1,6 @@
 class AppRoutes {
   static const homeRoot = '/';
-  static const notificationsRoot = '/';
+  static const notificationsRoot = '/notifications';
   static const profileRoot = '/';
 
   static const eventDetail = '/event';

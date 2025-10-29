@@ -14,45 +14,50 @@ class HANavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        // soft shadow from the top edge of the bar
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            spreadRadius: 0,
-            offset: const Offset(0, -4), // negative Y => shadow above
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.white,
-        surfaceTintColor: Colors
-            .transparent, // avoid the Material3 tint washing out your surface
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            navigationBarTheme: NavigationBarThemeData(
-              indicatorColor: Colors.transparent, // Remove selected indicator
-              labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                return const TextStyle(fontSize: 0); // Hide labels completely
-              }),
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999), // Fully rounded
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 16,
+              spreadRadius: 0,
+              offset: const Offset(0, 4),
             ),
-          ),
-          child: NavigationBar(
-            selectedIndex: index,
-            backgroundColor: Colors
-                .transparent, // use the Material color above, keep this transparent
-            elevation: 0, // shadow handled by the BoxShadow above
-            onDestinationSelected: onChanged,
-            destinations: [
-              for (final t in tabs)
-                NavigationDestination(
-                  icon: t.$1,
-                  selectedIcon: t.$2,
-                  label: '', // Remove labels
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: Material(
+            color: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                navigationBarTheme: NavigationBarThemeData(
+                  indicatorColor: Colors.transparent,
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    return const TextStyle(fontSize: 0);
+                  }),
                 ),
-            ],
+              ),
+              child: NavigationBar(
+                selectedIndex: index,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                onDestinationSelected: onChanged,
+                destinations: [
+                  for (final t in tabs)
+                    NavigationDestination(
+                      icon: t.$1,
+                      selectedIcon: t.$2,
+                      label: '',
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

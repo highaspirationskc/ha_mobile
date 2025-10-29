@@ -6,8 +6,6 @@ import '../../core/session.dart'; // currentUserKind, CurrentUserKind
 
 import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
-import '../widgets/bottom_sheet_community_service.dart';
-import '../widgets/bottom_sheet_pulse.dart';
 
 // Screens (body-only)
 import 'home_screen.dart';
@@ -43,13 +41,11 @@ class _RootShellState extends State<RootShell> {
 
   // Stable keys per potential tab
   final _homeKey = GlobalKey<NavigatorState>();
-  final _notiKey = GlobalKey<NavigatorState>();
   final _menteesKey = GlobalKey<NavigatorState>(); // mentor-only tab
   final _profileKey = GlobalKey<NavigatorState>();
 
   // Track top route names for titles
   String _homeRoute = AppRoutes.homeRoot;
-  String _notiRoute = AppRoutes.notificationsRoot;
   String _menteesRoute = AppRoutes.menteesRoot;
   String _profileRoute = AppRoutes.profileRoot;
 
@@ -67,10 +63,6 @@ class _RootShellState extends State<RootShell> {
 
   late final _homeObs = _TabObserver((r, _) {
     _homeRoute = r?.settings.name ?? AppRoutes.homeRoot;
-    _deferRebuild();
-  });
-  late final _notiObs = _TabObserver((r, _) {
-    _notiRoute = r?.settings.name ?? AppRoutes.notificationsRoot;
     _deferRebuild();
   });
   late final _menteesObs = _TabObserver((r, _) {
@@ -92,6 +84,11 @@ class _RootShellState extends State<RootShell> {
     rootName: AppRoutes.homeRoot,
     onGenerateRoute: (settings) {
       switch (settings.name) {
+        case AppRoutes.homeRoot:
+          return MaterialPageRoute(
+            builder: (_) => const HomeScreen(),
+            settings: const RouteSettings(name: AppRoutes.homeRoot),
+          );
         case AppRoutes.eventDetail:
           final event = settings.arguments as Event;
           return MaterialPageRoute(
@@ -114,7 +111,17 @@ class _RootShellState extends State<RootShell> {
             builder: (_) => const CheckInScannerScreen(),
             settings: const RouteSettings(name: AppRoutes.checkInScanner),
           );
-        case AppRoutes.homeRoot:
+        case AppRoutes.notificationsRoot:
+          return MaterialPageRoute(
+            builder: (_) => const NotificationsScreen(),
+            settings: const RouteSettings(name: AppRoutes.notificationsRoot),
+          );
+        case AppRoutes.notificationMessage:
+          final id = settings.arguments as String?;
+          return MaterialPageRoute(
+            builder: (_) => MessageScreen(messageId: id),
+            settings: const RouteSettings(name: AppRoutes.notificationMessage),
+          );
         default:
           return MaterialPageRoute(
             builder: (_) => const HomeScreen(),
@@ -127,37 +134,9 @@ class _RootShellState extends State<RootShell> {
       AppRoutes.calendar => 'Calendar',
       AppRoutes.scoopDetail => 'Saturday Scoop',
       AppRoutes.checkInScanner => '', // hide app bar; shell will handle
-      AppRoutes.homeRoot => 'Hello ${currentUser.firstName ?? 'there'}',
-      _ => 'High Aspirations',
-    },
-  );
-
-  _Tab _notiTab() => _Tab(
-    label: 'Notifications',
-    icon: const Icon(Icons.notifications),
-    selectedIcon: const Icon(Icons.notifications),
-    key: _notiKey,
-    observers: [_notiObs],
-    rootName: AppRoutes.notificationsRoot,
-    onGenerateRoute: (settings) {
-      switch (settings.name) {
-        case AppRoutes.notificationMessage:
-          final id = settings.arguments as String?;
-          return MaterialPageRoute(
-            builder: (_) => MessageScreen(messageId: id),
-            settings: const RouteSettings(name: AppRoutes.notificationMessage),
-          );
-        case AppRoutes.notificationsRoot:
-        default:
-          return MaterialPageRoute(
-            builder: (_) => const NotificationsScreen(),
-            settings: const RouteSettings(name: AppRoutes.notificationsRoot),
-          );
-      }
-    },
-    titleForRoute: (name) => switch (name) {
+      AppRoutes.notificationsRoot => 'Notifications',
       AppRoutes.notificationMessage => 'Message',
-      _ => 'Notifications',
+      _ => 'Hello ${currentUser.firstName ?? 'there'}',
     },
   );
 
@@ -168,11 +147,36 @@ class _RootShellState extends State<RootShell> {
     key: _menteesKey,
     observers: [_menteesObs],
     rootName: AppRoutes.menteesRoot,
-    onGenerateRoute: (_) => MaterialPageRoute(
-      builder: (_) => const MenteesListScreen(),
-      settings: const RouteSettings(name: AppRoutes.menteesRoot),
-    ),
-    titleForRoute: (_) => 'Mentees',
+    onGenerateRoute: (settings) {
+      switch (settings.name) {
+        case AppRoutes.menteesRoot:
+          return MaterialPageRoute(
+            builder: (_) => const MenteesListScreen(),
+            settings: const RouteSettings(name: AppRoutes.menteesRoot),
+          );
+        case AppRoutes.notificationsRoot:
+          return MaterialPageRoute(
+            builder: (_) => const NotificationsScreen(),
+            settings: const RouteSettings(name: AppRoutes.notificationsRoot),
+          );
+        case AppRoutes.notificationMessage:
+          final id = settings.arguments as String?;
+          return MaterialPageRoute(
+            builder: (_) => MessageScreen(messageId: id),
+            settings: const RouteSettings(name: AppRoutes.notificationMessage),
+          );
+        default:
+          return MaterialPageRoute(
+            builder: (_) => const MenteesListScreen(),
+            settings: const RouteSettings(name: AppRoutes.menteesRoot),
+          );
+      }
+    },
+    titleForRoute: (name) => switch (name) {
+      AppRoutes.notificationsRoot => 'Notifications',
+      AppRoutes.notificationMessage => 'Message',
+      _ => 'Mentees',
+    },
   );
 
   _Tab _profileTab() => _Tab(
@@ -184,6 +188,11 @@ class _RootShellState extends State<RootShell> {
     rootName: AppRoutes.profileRoot,
     onGenerateRoute: (settings) {
       switch (settings.name) {
+        case AppRoutes.profileRoot:
+          return MaterialPageRoute(
+            builder: (_) => const ProfileScreen(),
+            settings: const RouteSettings(name: AppRoutes.profileRoot),
+          );
         case AppRoutes.communityService:
           return MaterialPageRoute(
             builder: (_) => const CommunityServiceScreen(),
@@ -199,7 +208,17 @@ class _RootShellState extends State<RootShell> {
             builder: (_) => const TeamScreen(),
             settings: const RouteSettings(name: AppRoutes.team),
           );
-        case AppRoutes.profileRoot:
+        case AppRoutes.notificationsRoot:
+          return MaterialPageRoute(
+            builder: (_) => const NotificationsScreen(),
+            settings: const RouteSettings(name: AppRoutes.notificationsRoot),
+          );
+        case AppRoutes.notificationMessage:
+          final id = settings.arguments as String?;
+          return MaterialPageRoute(
+            builder: (_) => MessageScreen(messageId: id),
+            settings: const RouteSettings(name: AppRoutes.notificationMessage),
+          );
         default:
           return MaterialPageRoute(
             builder: (_) => const ProfileScreen(),
@@ -211,6 +230,8 @@ class _RootShellState extends State<RootShell> {
       AppRoutes.communityService => 'Community Service',
       AppRoutes.pulses => 'Pulses',
       AppRoutes.team => 'Team',
+      AppRoutes.notificationsRoot => 'Notifications',
+      AppRoutes.notificationMessage => 'Message',
       _ => 'Profile',
     },
   );
@@ -218,7 +239,6 @@ class _RootShellState extends State<RootShell> {
   Future<bool> _onWillPop(List<_Tab> tabs) async {
     final key = [
       _homeKey,
-      _notiKey,
       _menteesKey,
       _profileKey,
     ].where((k) => tabs.any((t) => t.key == k)).elementAt(_stackIndex);
@@ -237,7 +257,6 @@ class _RootShellState extends State<RootShell> {
   String _titleFor(List<_Tab> tabs, int stackIndex) {
     final names = [
       _homeRoute,
-      if (tabs.any((t) => t.key == _notiKey)) _notiRoute,
       if (tabs.any((t) => t.key == _menteesKey)) _menteesRoute,
       _profileRoute,
     ];
@@ -251,62 +270,8 @@ class _RootShellState extends State<RootShell> {
 
   bool _shouldHideNavBar(String routeName) =>
       routeName != AppRoutes.homeRoot &&
-      routeName != AppRoutes.notificationsRoot &&
       routeName != AppRoutes.menteesRoot &&
       routeName != AppRoutes.profileRoot;
-
-  void _showAddSheet() {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (ctx) {
-        final t = Theme.of(ctx).textTheme;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Add',
-                  style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: const Icon(Icons.volunteer_activism_outlined),
-                  title: const Text('Community Service'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.white,
-                      builder: (context) => const BottomSheetCommunityService(),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.favorite_outline),
-                  title: const Text('What\'s the Pulse?'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.white,
-                      builder: (context) => const BottomSheetPulse(),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -315,25 +280,19 @@ class _RootShellState extends State<RootShell> {
       builder: (context, kind, _) {
         final isMentee = kind == CurrentUserKind.mentee;
 
-        // Build stack tabs
+        // Build stack tabs (notifications removed from tabs, now in app bar)
         final tabs = <_Tab>[
           _homeTab(),
-          _notiTab(),
           if (!isMentee) _menteesTab(), // mentor only
           _profileTab(),
         ];
 
-        // Map stackIndex <-> navIndex
-        int navIndexFromStack(int s) => isMentee ? (s >= 2 ? s + 1 : s) : s;
-        int stackIndexFromNav(int n) => isMentee ? (n > 2 ? n - 1 : n) : n;
-
-        final navSelected = navIndexFromStack(_stackIndex);
+        final navSelected = _stackIndex;
 
         // Title & app bar visibility
         final title = _titleFor(tabs, _stackIndex);
         final currentRoute = [
           _homeRoute,
-          _notiRoute,
           if (!isMentee) _menteesRoute,
           _profileRoute,
         ][_stackIndex];
@@ -343,17 +302,10 @@ class _RootShellState extends State<RootShell> {
         // Count unread messages for notification badge
         final unreadCount = mockMessages.where((msg) => !msg.read).length;
 
-        // Build NavigationBar destinations
+        // Build NavigationBar destinations (notifications removed, add removed)
         final navItems = <(Widget, Widget, String)>[
           (const Icon(Icons.home_outlined), const Icon(Icons.home), 'Home'),
-          (
-            _buildNotificationIcon(Icons.notifications_outlined, unreadCount),
-            _buildNotificationIcon(Icons.notifications, unreadCount),
-            'Notifications',
-          ),
-          if (isMentee)
-            (const Icon(Icons.add), const Icon(Icons.add), '')
-          else
+          if (!isMentee)
             (
               const Icon(Icons.group_outlined),
               const Icon(Icons.group),
@@ -396,18 +348,38 @@ class _RootShellState extends State<RootShell> {
                           )
                         : null,
                     showBack:
-                        ([_homeKey, _notiKey, _menteesKey, _profileKey]
+                        ([_homeKey, _menteesKey, _profileKey]
                             .where((k) => tabs.any((t) => t.key == k))
                             .elementAt(_stackIndex)
                             .currentState
                             ?.canPop() ??
                         false),
                     onBack: () =>
-                        ([_homeKey, _notiKey, _menteesKey, _profileKey]
+                        ([_homeKey, _menteesKey, _profileKey]
                                 .where((k) => tabs.any((t) => t.key == k))
                                 .elementAt(_stackIndex)
                                 .currentState!)
                             .maybePop(),
+                    actions: [
+                      IconButton(
+                        icon: _buildNotificationIcon(
+                          Icons.notifications_outlined,
+                          unreadCount,
+                        ),
+                        onPressed: () {
+                          // Navigate to notifications via current tab navigator
+                          final currentNavigator =
+                              [_homeKey, _menteesKey, _profileKey]
+                                  .where((k) => tabs.any((t) => t.key == k))
+                                  .elementAt(_stackIndex)
+                                  .currentState;
+                          currentNavigator?.pushNamed(
+                            AppRoutes.notificationsRoot,
+                          );
+                        },
+                        tooltip: 'Notifications',
+                      ),
+                    ],
                   ),
             body: IndexedStack(
               index: _stackIndex,
@@ -428,14 +400,8 @@ class _RootShellState extends State<RootShell> {
                 : HANavBar(
                     index: navSelected,
                     onChanged: (tapped) {
-                      if (isMentee && tapped == 2) {
-                        // Middle action: show sheet, don't change tab
-                        _showAddSheet();
-                        return;
-                      }
-                      final nextStack = stackIndexFromNav(tapped);
-                      if (_stackIndex != nextStack) {
-                        setState(() => _stackIndex = nextStack);
+                      if (_stackIndex != tapped) {
+                        setState(() => _stackIndex = tapped);
                       }
                     },
                     tabs: navItems,

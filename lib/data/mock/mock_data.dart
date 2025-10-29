@@ -8,7 +8,6 @@ import '../../business/scoops/entities/scoop.dart';
 
 // NEW role-based user models
 import '../../business/user/entities/user_base.dart';
-import '../../business/user/entities/user_role.dart';
 import '../../business/user/entities/user_refs.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../business/user/entities/role_mentor.dart';
@@ -249,39 +248,61 @@ List<User> _pickAttendees() {
   return pool.take(count).toList();
 }
 
-final List<Event> mockEvents = List<Event>.generate(8, (i) {
-  final titles = [
-    'Mentor Meetup',
-    'Career Workshop',
-    'Community Service Day',
-    'STEM Lab Tour',
-    'College Q&A',
-    'Leadership Panel',
-    'Hack Night',
-    'Alumni Mixer',
-  ];
-  final locations = [
-    'Downtown Center',
-    'HA Campus – Room 204',
-    'Riverside Park',
-    'Innovation Hub',
-    'Virtual (Zoom)',
-    'Auditorium A',
-    'Makerspace',
-    'Cafe Aurora',
-  ];
+/// Helper to find the next Saturday from now
+DateTime _nextSaturday() {
+  final now = DateTime.now();
+  final daysUntilSaturday = (DateTime.saturday - now.weekday) % 7;
+  final daysToAdd = daysUntilSaturday == 0 ? 7 : daysUntilSaturday;
+  final saturday = now.add(Duration(days: daysToAdd));
+  return DateTime(saturday.year, saturday.month, saturday.day, 14, 0); // 2 PM
+}
 
-  return Event(
-    id: 'evt_${i + 1}',
-    name: titles[i],
+final List<Event> mockEvents = [
+  // First event is always a Saturday event
+  Event(
+    id: 'evt_saturday',
+    name: 'Chess Tournament',
     description:
-        'Join us for ${titles[i].toLowerCase()} focused on growth, networking, and hands-on learning.',
-    dateTime: _onDay((i + 1) * 2, hour: 17 + (i % 3)), // 5–7 PM ranges
-    location: locations[i],
-    image: _img(i),
+        'Join us for a friendly chess tournament! All skill levels welcome. Compete for prizes and connect with fellow chess enthusiasts.',
+    dateTime: _nextSaturday(),
+    location: 'HA Headquarters',
+    image:
+        'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?q=80&w=1200&auto=format&fit=crop',
     attendees: _pickAttendees(),
-  );
-});
+  ),
+  // Other events
+  ...List<Event>.generate(7, (i) {
+    final titles = [
+      'Mentor Meetup',
+      'Career Workshop',
+      'Community Service Day',
+      'STEM Lab Tour',
+      'College Q&A',
+      'Leadership Panel',
+      'Hack Night',
+    ];
+    final locations = [
+      'Downtown Center',
+      'HA Campus – Room 204',
+      'Riverside Park',
+      'Innovation Hub',
+      'Virtual (Zoom)',
+      'Auditorium A',
+      'Makerspace',
+    ];
+
+    return Event(
+      id: 'evt_${i + 1}',
+      name: titles[i],
+      description:
+          'Join us for ${titles[i].toLowerCase()} focused on growth, networking, and hands-on learning.',
+      dateTime: _onDay((i + 1) * 2 + 1, hour: 17 + (i % 3)), // 5–7 PM ranges
+      location: locations[i],
+      image: _img(i),
+      attendees: _pickAttendees(),
+    );
+  }),
+];
 
 /// =================================================================================
 /// SCOOPS
