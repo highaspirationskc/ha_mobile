@@ -6,6 +6,7 @@ final User mockMentee = User(
   email: 'mentee@example.com',
   firstName: 'Jordan',
   lastName: 'Lee',
+  image: 'assets/images/jordan_lee.jpg',
   colorIndex: 8, // indigo-ish
   roles: const {UserRole.mentee},
 );

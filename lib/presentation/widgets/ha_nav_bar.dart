@@ -15,8 +15,9 @@ class HANavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
       child: Container(
+        height: 60,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(999), // Fully rounded
@@ -41,6 +42,7 @@ class HANavBar extends StatelessWidget {
                   labelTextStyle: WidgetStateProperty.resolveWith((states) {
                     return const TextStyle(fontSize: 0);
                   }),
+                  height: 60,
                 ),
               ),
               child: NavigationBar(

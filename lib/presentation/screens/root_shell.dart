@@ -8,13 +8,14 @@ import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
 
 // Screens (body-only)
-import 'home_screen.dart';
+import 'home/home_screen.dart';
 import 'notifications_screen.dart';
 import 'message_screen.dart';
 import 'profile_screen.dart';
 import 'event_detail_screen.dart';
 import 'calendar_screen.dart';
 import 'scoop_detail_screen.dart';
+import 'past_scoops_screen.dart';
 import 'check_in_scanner.dart';
 import 'mentees_list_screen.dart';
 import 'community_service_screen.dart';
@@ -42,11 +43,13 @@ class _RootShellState extends State<RootShell> {
   // Stable keys per potential tab
   final _homeKey = GlobalKey<NavigatorState>();
   final _menteesKey = GlobalKey<NavigatorState>(); // mentor-only tab
+  final _teamsKey = GlobalKey<NavigatorState>();
   final _profileKey = GlobalKey<NavigatorState>();
 
   // Track top route names for titles
   String _homeRoute = AppRoutes.homeRoot;
   String _menteesRoute = AppRoutes.menteesRoot;
+  String _teamsRoute = AppRoutes.teamRoot;
   String _profileRoute = AppRoutes.profileRoot;
 
   // deferred setState to avoid setState-during-build
@@ -67,6 +70,10 @@ class _RootShellState extends State<RootShell> {
   });
   late final _menteesObs = _TabObserver((r, _) {
     _menteesRoute = r?.settings.name ?? AppRoutes.menteesRoot;
+    _deferRebuild();
+  });
+  late final _teamsObs = _TabObserver((r, _) {
+    _teamsRoute = r?.settings.name ?? AppRoutes.teamRoot;
     _deferRebuild();
   });
   late final _profileObs = _TabObserver((r, _) {
@@ -106,6 +113,11 @@ class _RootShellState extends State<RootShell> {
             builder: (_) => ScoopDetailScreen(scoop: scoop),
             settings: const RouteSettings(name: AppRoutes.scoopDetail),
           );
+        case AppRoutes.pastScoops:
+          return MaterialPageRoute(
+            builder: (_) => const PastScoopsScreen(),
+            settings: const RouteSettings(name: AppRoutes.pastScoops),
+          );
         case AppRoutes.checkInScanner:
           return MaterialPageRoute(
             builder: (_) => const CheckInScannerScreen(),
@@ -133,6 +145,7 @@ class _RootShellState extends State<RootShell> {
       AppRoutes.eventDetail => 'Event',
       AppRoutes.calendar => 'Calendar',
       AppRoutes.scoopDetail => 'Saturday Scoop',
+      AppRoutes.pastScoops => 'Past Scoops',
       AppRoutes.checkInScanner => '', // hide app bar; shell will handle
       AppRoutes.notificationsRoot => 'Notifications',
       AppRoutes.notificationMessage => 'Message',
@@ -179,6 +192,45 @@ class _RootShellState extends State<RootShell> {
     },
   );
 
+  _Tab _teamsTab() => _Tab(
+    label: 'Teams',
+    icon: const Icon(Icons.emoji_events_outlined),
+    selectedIcon: const Icon(Icons.emoji_events),
+    key: _teamsKey,
+    observers: [_teamsObs],
+    rootName: AppRoutes.teamRoot,
+    onGenerateRoute: (settings) {
+      switch (settings.name) {
+        case AppRoutes.teamRoot:
+          return MaterialPageRoute(
+            builder: (_) => const TeamScreen(),
+            settings: const RouteSettings(name: AppRoutes.teamRoot),
+          );
+        case AppRoutes.notificationsRoot:
+          return MaterialPageRoute(
+            builder: (_) => const NotificationsScreen(),
+            settings: const RouteSettings(name: AppRoutes.notificationsRoot),
+          );
+        case AppRoutes.notificationMessage:
+          final id = settings.arguments as String?;
+          return MaterialPageRoute(
+            builder: (_) => MessageScreen(messageId: id),
+            settings: const RouteSettings(name: AppRoutes.notificationMessage),
+          );
+        default:
+          return MaterialPageRoute(
+            builder: (_) => const TeamScreen(),
+            settings: const RouteSettings(name: AppRoutes.teamRoot),
+          );
+      }
+    },
+    titleForRoute: (name) => switch (name) {
+      AppRoutes.notificationsRoot => 'Notifications',
+      AppRoutes.notificationMessage => 'Message',
+      _ => 'Team',
+    },
+  );
+
   _Tab _profileTab() => _Tab(
     label: 'Profile',
     icon: const Icon(Icons.person_outline),
@@ -204,6 +256,7 @@ class _RootShellState extends State<RootShell> {
             settings: const RouteSettings(name: AppRoutes.pulses),
           );
         case AppRoutes.team:
+          // Legacy route - redirect to team screen for backwards compatibility
           return MaterialPageRoute(
             builder: (_) => const TeamScreen(),
             settings: const RouteSettings(name: AppRoutes.team),
@@ -240,6 +293,7 @@ class _RootShellState extends State<RootShell> {
     final key = [
       _homeKey,
       _menteesKey,
+      _teamsKey,
       _profileKey,
     ].where((k) => tabs.any((t) => t.key == k)).elementAt(_stackIndex);
     final canPop = key.currentState?.canPop() ?? false;
@@ -258,6 +312,7 @@ class _RootShellState extends State<RootShell> {
     final names = [
       _homeRoute,
       if (tabs.any((t) => t.key == _menteesKey)) _menteesRoute,
+      _teamsRoute,
       _profileRoute,
     ];
     final routeName = names[stackIndex];
@@ -271,6 +326,7 @@ class _RootShellState extends State<RootShell> {
   bool _shouldHideNavBar(String routeName) =>
       routeName != AppRoutes.homeRoot &&
       routeName != AppRoutes.menteesRoot &&
+      routeName != AppRoutes.teamRoot &&
       routeName != AppRoutes.profileRoot;
 
   @override
@@ -284,6 +340,7 @@ class _RootShellState extends State<RootShell> {
         final tabs = <_Tab>[
           _homeTab(),
           if (!isMentee) _menteesTab(), // mentor only
+          _teamsTab(),
           _profileTab(),
         ];
 
@@ -294,6 +351,7 @@ class _RootShellState extends State<RootShell> {
         final currentRoute = [
           _homeRoute,
           if (!isMentee) _menteesRoute,
+          _teamsRoute,
           _profileRoute,
         ][_stackIndex];
         final hideAppBar = _shouldHideAppBar(currentRoute);
@@ -312,6 +370,11 @@ class _RootShellState extends State<RootShell> {
               'Mentees',
             ),
           (
+            const Icon(Icons.emoji_events_outlined),
+            const Icon(Icons.emoji_events),
+            'Teams',
+          ),
+          (
             const Icon(Icons.person_outline),
             const Icon(Icons.person),
             'Profile',
@@ -321,6 +384,7 @@ class _RootShellState extends State<RootShell> {
         return WillPopScope(
           onWillPop: () => _onWillPop(tabs),
           child: Scaffold(
+            extendBody: true, // Allow body to extend under floating nav
             appBar: hideAppBar
                 ? null
                 : HAAppBar(
@@ -348,14 +412,14 @@ class _RootShellState extends State<RootShell> {
                           )
                         : null,
                     showBack:
-                        ([_homeKey, _menteesKey, _profileKey]
+                        ([_homeKey, _menteesKey, _teamsKey, _profileKey]
                             .where((k) => tabs.any((t) => t.key == k))
                             .elementAt(_stackIndex)
                             .currentState
                             ?.canPop() ??
                         false),
                     onBack: () =>
-                        ([_homeKey, _menteesKey, _profileKey]
+                        ([_homeKey, _menteesKey, _teamsKey, _profileKey]
                                 .where((k) => tabs.any((t) => t.key == k))
                                 .elementAt(_stackIndex)
                                 .currentState!)
@@ -369,7 +433,7 @@ class _RootShellState extends State<RootShell> {
                         onPressed: () {
                           // Navigate to notifications via current tab navigator
                           final currentNavigator =
-                              [_homeKey, _menteesKey, _profileKey]
+                              [_homeKey, _menteesKey, _teamsKey, _profileKey]
                                   .where((k) => tabs.any((t) => t.key == k))
                                   .elementAt(_stackIndex)
                                   .currentState;

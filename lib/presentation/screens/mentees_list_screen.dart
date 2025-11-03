@@ -10,7 +10,12 @@ class MenteesListScreen extends StatelessWidget {
     final t = Theme.of(context).textTheme;
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: 100, // Space for floating nav bar
+      ),
       itemCount: 12, // placeholder list
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, i) {

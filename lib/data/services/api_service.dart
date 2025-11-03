@@ -202,4 +202,14 @@ class ApiService {
     await Future.delayed(const Duration(milliseconds: 400));
     return getMockLeaderboard();
   }
+
+  /// Gets the mentee spotlight (mentee with the most points)
+  Future<MenteeRanking?> getMenteeSpotlight() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final leaderboard = getMockLeaderboard();
+    if (leaderboard.topMentees.isEmpty) return null;
+
+    // Return the mentee with the highest points (should be first in the list)
+    return leaderboard.topMentees.first;
+  }
 }

@@ -5,6 +5,8 @@ import '../../core/session.dart';
 import '../../core/routes.dart';
 import '../../data/services/api_service.dart';
 import '../../core/theme/brand_colors.dart';
+import '../../core/theme/color_schemes.dart';
+import 'avatar_mini.dart';
 
 class ThisSaturdayCard extends StatefulWidget {
   final Event event;
@@ -122,16 +124,6 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // "This Saturday" label
-                    Text(
-                      'This Saturday',
-                      style: t.labelMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
                     // Event title
                     Text(
                       e.name,
@@ -184,6 +176,13 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                         ),
                       ],
                     ),
+
+                    // Attending avatars
+                    if (e.attendees.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _AttendingAvatars(attendees: e.attendees),
+                    ],
+
                     const SizedBox(height: 16),
 
                     // Action button
@@ -325,5 +324,91 @@ class _EventImage extends StatelessWidget {
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => placeholder(),
           );
+  }
+}
+
+class _AttendingAvatars extends StatelessWidget {
+  final List attendees;
+
+  const _AttendingAvatars({required this.attendees});
+
+  String _buildInitials(dynamic attendee) {
+    final first = attendee.firstName ?? '';
+    final last = attendee.lastName ?? '';
+    if (first.isEmpty && last.isEmpty) return '';
+    if (first.isEmpty) return last.substring(0, 1).toUpperCase();
+    if (last.isEmpty) return first.substring(0, 1).toUpperCase();
+    return '${first.substring(0, 1)}${last.substring(0, 1)}'.toUpperCase();
+  }
+
+  Color _getColor(int? colorIndex) {
+    if (colorIndex == null ||
+        colorIndex < 0 ||
+        colorIndex >= kProfileColors.length) {
+      return kProfileColors[0];
+    }
+    return kProfileColors[colorIndex];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final displayedAttendees = attendees.take(3).toList();
+    final remainingCount = attendees.length - displayedAttendees.length;
+
+    // Calculate width: each avatar offset + final avatar size
+    const double overlapOffset = 8.0; // Reduced from 20.0 for more overlap
+    final avatarCount =
+        displayedAttendees.length + (remainingCount > 0 ? 1 : 0);
+    final stackWidth = (avatarCount - 1) * overlapOffset + 28.0;
+
+    return SizedBox(
+      height: 28,
+      width: stackWidth,
+      child: Stack(
+        children: [
+          for (int i = 0; i < displayedAttendees.length; i++)
+            Positioned(
+              left: i * overlapOffset,
+              child: AvatarMini(
+                imageUrl: displayedAttendees[i].image,
+                initials: _buildInitials(displayedAttendees[i]),
+                color: _getColor(displayedAttendees[i].colorIndex),
+                strokeColor: kHAPrimary,
+                size: 28,
+              ),
+            ),
+          // Remaining count circle
+          if (remainingCount > 0)
+            Positioned(
+              left: displayedAttendees.length * overlapOffset,
+              child: Container(
+                width: 28,
+                height: 28,
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: kHAPrimary,
+                  shape: BoxShape.circle,
+                ),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '+$remainingCount',
+                      style: const TextStyle(
+                        color: kHAPrimary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

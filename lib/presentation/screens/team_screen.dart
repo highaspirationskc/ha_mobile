@@ -170,6 +170,7 @@ class _TeamScreenState extends State<TeamScreen> {
     final teamsByRank = leaderboard.teamsByRank;
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 100), // Space for floating nav bar
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

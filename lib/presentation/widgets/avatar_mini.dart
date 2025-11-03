@@ -11,6 +11,9 @@ class AvatarMini extends StatelessWidget {
   /// Optional solid background color used behind initials.
   final Color? color;
 
+  /// Optional stroke/ring color. Defaults to white.
+  final Color strokeColor;
+
   /// Diameter in logical pixels.
   final double size;
 
@@ -19,6 +22,7 @@ class AvatarMini extends StatelessWidget {
     this.imageUrl,
     this.initials,
     this.color,
+    this.strokeColor = Colors.white,
     this.size = 24,
   });
 
@@ -34,15 +38,12 @@ class AvatarMini extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Outer white ring (2px)
+    // Outer ring (2px)
     return Container(
       width: size,
       height: size,
       padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: strokeColor, shape: BoxShape.circle),
       child: ClipOval(child: _buildInner(context)),
     );
   }
