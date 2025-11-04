@@ -1,18 +1,24 @@
 // lib/data/services/api_service.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../business/community_service/entities/community_service.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
+import '../../business/auth/entities/auth_response.dart';
 import '../../data/mock/mock_data.dart';
 import '../mock/mock_leaderboard.dart';
 
 class ApiService {
   ApiService._() {
     _initializeMockData();
+    _initializeGraphQLClient();
   }
   static final instance = ApiService._();
+
+  late GraphQLClient _client;
+  String? _authToken;
 
   /// Broadcast-only: increments whenever registrations/check-ins change.
   final ValueNotifier<int> changes = ValueNotifier<int>(0);
@@ -21,6 +27,19 @@ class ApiService {
   final Map<String, Set<String>> _checkins = {};
   final Map<String, List<CommunityService>> _communityServices = {};
   final Map<String, List<Pulse>> _pulses = {};
+
+  /// Initialize GraphQL client
+  void _initializeGraphQLClient() {
+    final httpLink = HttpLink('https://api.highaspirationskc.org/graphql');
+
+    final authLink = AuthLink(
+      getToken: () async => _authToken != null ? 'Bearer $_authToken' : null,
+    );
+
+    final link = authLink.concat(httpLink);
+
+    _client = GraphQLClient(cache: GraphQLCache(), link: link);
+  }
 
   /// Initialize with some mock check-in data for testing
   void _initializeMockData() {
@@ -36,6 +55,62 @@ class ApiService {
       'evt_7', // Hack Night
     };
   }
+
+  /// Login with email and password
+  Future<AuthResponse> login({
+    required String email,
+    required String password,
+  }) async {
+    const loginMutation = r'''
+      mutation Login($input: LoginInput!) {
+        login(input: $input) {
+          token
+          user {
+            id
+            email
+          }
+        }
+      }
+    ''';
+
+    final result = await _client.mutate(
+      MutationOptions(
+        document: gql(loginMutation),
+        variables: {
+          'input': {'email': email, 'password': password},
+        },
+      ),
+    );
+
+    if (result.hasException) {
+      if (kDebugMode) {
+        print('Login error: ${result.exception.toString()}');
+      }
+      throw Exception(
+        result.exception?.graphqlErrors.isNotEmpty == true
+            ? result.exception!.graphqlErrors.first.message
+            : 'Login failed. Please check your credentials.',
+      );
+    }
+
+    final data = result.data?['login'];
+    if (data == null) {
+      throw Exception('Invalid response from server');
+    }
+
+    final authResponse = AuthResponse.fromJson(data);
+    _authToken = authResponse.token;
+
+    return authResponse;
+  }
+
+  /// Logout and clear auth token
+  void logout() {
+    _authToken = null;
+  }
+
+  /// Check if user is authenticated
+  bool get isAuthenticated => _authToken != null;
 
   Future<void> registerForEvent({
     required String eventId,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ha_mobile/presentation/widgets/wave_panel.dart';
 import '../../core/theme/brand_colors.dart';
+import '../../core/session.dart';
+import '../../data/services/api_service.dart';
+import '../../data/services/auth_storage.dart';
 import '../widgets/button_long.dart';
 import '../screens/root_shell.dart';
 
@@ -15,6 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -23,12 +28,42 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Navigate to home screen (RootShell)
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const RootShell()),
+  Future<void> _handleLogin() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authResponse = await ApiService.instance.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
+
+      // Save auth data to storage
+      await AuthStorage.saveAuth(
+        token: authResponse.token,
+        user: authResponse.user,
+      );
+
+      // Set authenticated user in session
+      setAuthenticatedUser(authResponse.user);
+
+      if (mounted) {
+        // Navigate to home screen (RootShell)
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const RootShell()),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
     }
   }
 
@@ -216,13 +251,50 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 24),
 
+                              // Error Message
+                              if (_errorMessage != null)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.red.shade200,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline,
+                                        color: Colors.red.shade700,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: TextStyle(
+                                            color: Colors.red.shade700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
                               // Login Button
                               ButtonLong(
-                                label: 'Login',
-                                onPressed: _handleLogin,
+                                label: _isLoading ? 'Logging in...' : 'Login',
+                                onPressed: _isLoading ? null : _handleLogin,
                                 style: FilledButton.styleFrom(
                                   backgroundColor: kHAPrimary,
                                   foregroundColor: Colors.white,
+                                  disabledBackgroundColor: kHAPrimary
+                                      .withOpacity(0.6),
+                                  disabledForegroundColor: Colors.white
+                                      .withOpacity(0.7),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
