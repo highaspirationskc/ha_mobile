@@ -227,7 +227,7 @@ class _RootShellState extends State<RootShell> {
     titleForRoute: (name) => switch (name) {
       AppRoutes.notificationsRoot => 'Notifications',
       AppRoutes.notificationMessage => 'Message',
-      _ => 'Team',
+      _ => 'Leaderboard',
     },
   );
 

@@ -20,10 +20,10 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isTeamRoute = title == 'Team';
+    final isTeamRoute = title == 'Leaderboard' || title == 'Team';
 
     return AppBar(
-      backgroundColor: isTeamRoute ? cs.surfaceContainerHighest : Colors.white,
+      backgroundColor: Colors.white,
       foregroundColor: isTeamRoute ? kFontDark : null,
       surfaceTintColor: Colors.transparent,
       elevation: 0,

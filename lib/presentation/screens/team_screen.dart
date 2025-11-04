@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:ha_mobile/core/theme/brand_colors.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../business/teams/entities/team.dart';
-import '../../core/theme/color_schemes.dart';
 import '../../data/services/api_service.dart';
+import '../widgets/tabs.dart';
+import '../widgets/podium.dart';
 
 class TeamScreen extends StatefulWidget {
   const TeamScreen({super.key});
@@ -11,15 +13,24 @@ class TeamScreen extends StatefulWidget {
   State<TeamScreen> createState() => _TeamScreenState();
 }
 
-class _TeamScreenState extends State<TeamScreen> {
+class _TeamScreenState extends State<TeamScreen>
+    with SingleTickerProviderStateMixin {
   Leaderboard? _leaderboard;
   bool _isLoading = true;
   String? _errorMessage;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadLeaderboard();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLeaderboard() async {
@@ -44,10 +55,10 @@ class _TeamScreenState extends State<TeamScreen> {
   // Helper method to get team color from TeamColor enum
   Color _getTeamColor(TeamColor color) {
     return switch (color) {
-      TeamColor.red => kProfileColors[0], // red
-      TeamColor.green => kProfileColors[4], // green
-      TeamColor.blue => kProfileColors[7], // blue
-      TeamColor.yellow => kProfileColors[2], // amber/yellow
+      TeamColor.red => kTeamRed,
+      TeamColor.green => kTeamGreen,
+      TeamColor.blue => kTeamBlue,
+      TeamColor.yellow => kTeamYellow,
     };
   }
 
@@ -59,20 +70,14 @@ class _TeamScreenState extends State<TeamScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background color gradient
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: const [0.0, 0.35, 0.35, 1.0],
-                  colors: [
-                    cs.surfaceContainerHighest,
-                    cs.surfaceContainerHighest,
-                    cs.surface,
-                    cs.surface,
-                  ],
+                  stops: const [0.0, 1.0],
+                  colors: [Colors.white, kHAPrimary],
                 ),
               ),
             ),
@@ -80,53 +85,18 @@ class _TeamScreenState extends State<TeamScreen> {
 
           // Content
           SafeArea(
+            bottom: false, // Allow content to extend behind bottom nav bar
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header section
-                  Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: cs.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: cs.primary.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Icon(Icons.group, color: cs.primary, size: 28),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Team',
-                              style: t.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: cs.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Connect with your team members',
-                              style: t.bodyMedium?.copyWith(
-                                color: cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  HATabs(
+                    controller: _tabController,
+                    tabNames: const ['Teams', 'Mentees'],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
                   // Content based on loading state
                   Expanded(
@@ -150,7 +120,13 @@ class _TeamScreenState extends State<TeamScreen> {
                               ],
                             ),
                           )
-                        : _buildLeaderboardContent(context, cs, t),
+                        : TabBarView(
+                            controller: _tabController,
+                            children: [
+                              _buildTeamsTab(context, cs, t),
+                              _buildMenteesTab(context, cs, t),
+                            ],
+                          ),
                   ),
                 ],
               ),
@@ -161,46 +137,76 @@ class _TeamScreenState extends State<TeamScreen> {
     );
   }
 
-  Widget _buildLeaderboardContent(
-    BuildContext context,
-    ColorScheme cs,
-    TextTheme t,
-  ) {
+  Widget _buildTeamsTab(BuildContext context, ColorScheme cs, TextTheme t) {
     final leaderboard = _leaderboard!;
     final teamsByRank = leaderboard.teamsByRank;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 100), // Space for floating nav bar
+      child: SizedBox(
+        height: screenHeight * 1.5, // Enough space for podiums + list content
+        child: Stack(
+          children: [
+            // Podiums container at top (1/3 screen height)
+            if (teamsByRank.isNotEmpty)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _buildTopThreeTeamsPodium(context, teamsByRank, cs, t),
+              ),
+
+            // Teams list starting at 1/3 down the screen
+            Positioned(
+              top: screenHeight / 4,
+              left: 0,
+              right: 0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Team Rankings Section
+                  _buildSectionHeader('Team Rankings', cs, t),
+                  const SizedBox(height: 16),
+                  ...teamsByRank.map((team) => _buildTeamTile(team, cs, t)),
+
+                  const SizedBox(height: 120), // Space to scroll past nav bar
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenteesTab(BuildContext context, ColorScheme cs, TextTheme t) {
+    final leaderboard = _leaderboard!;
+    final topMentees = leaderboard.topMentees.take(10).toList();
+
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top 3 Teams Podium
-          if (teamsByRank.isNotEmpty)
-            _buildTopThreeTeamsPodium(teamsByRank, cs, t),
+          // Top 3 Mentees Podium
+          if (topMentees.isNotEmpty)
+            _buildTopThreeMenteesPodium(topMentees, cs, t),
 
           const SizedBox(height: 32),
 
-          // Team Rankings Section
-          _buildSectionHeader('Team Rankings', cs, t),
+          // Top 10 Mentees Section
+          _buildSectionHeader('Top 10 Mentees', cs, t),
           const SizedBox(height: 16),
-          ...teamsByRank.map((team) => _buildTeamTile(team, cs, t)),
+          ...topMentees.map((mentee) => _buildMenteeTile(mentee, cs, t)),
 
-          const SizedBox(height: 32),
-
-          // Top Mentees Section
-          _buildSectionHeader('Top Mentees', cs, t),
-          const SizedBox(height: 16),
-          ...leaderboard.topMentees.map(
-            (mentee) => _buildMenteeTile(mentee, cs, t),
-          ),
-
-          const SizedBox(height: 16),
+          const SizedBox(height: 120), // Space to scroll past nav bar
         ],
       ),
     );
   }
 
   Widget _buildTopThreeTeamsPodium(
+    BuildContext context,
     List<Team> teams,
     ColorScheme cs,
     TextTheme t,
@@ -208,6 +214,68 @@ class _TeamScreenState extends State<TeamScreen> {
     final first = teams.length > 0 ? teams[0] : null;
     final second = teams.length > 1 ? teams[1] : null;
     final third = teams.length > 2 ? teams[2] : null;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return SizedBox(
+      width: screenWidth,
+      height: screenHeight / 3, // 1/3 screen size container
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // 2nd place (left)
+            if (second != null)
+              _buildPodiumPosition(
+                context: context,
+                team: second,
+                position: 2,
+                height: 240,
+                size: screenWidth * 0.28,
+                cs: cs,
+                t: t,
+              ),
+
+            // 1st place (center)
+            if (first != null)
+              _buildPodiumPosition(
+                context: context,
+                team: first,
+                position: 1,
+                height: 280,
+                size: screenWidth * 0.32,
+                cs: cs,
+                t: t,
+              ),
+
+            // 3rd place (right)
+            if (third != null)
+              _buildPodiumPosition(
+                context: context,
+                team: third,
+                position: 3,
+                height: 200,
+                size: screenWidth * 0.26,
+                cs: cs,
+                t: t,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopThreeMenteesPodium(
+    List<MenteeRanking> mentees,
+    ColorScheme cs,
+    TextTheme t,
+  ) {
+    final first = mentees.length > 0 ? mentees[0] : null;
+    final second = mentees.length > 1 ? mentees[1] : null;
+    final third = mentees.length > 2 ? mentees[2] : null;
 
     return Container(
       height: 200,
@@ -217,11 +285,11 @@ class _TeamScreenState extends State<TeamScreen> {
           // 2nd place (left)
           if (second != null)
             Expanded(
-              child: _buildPodiumPosition(
-                team: second,
+              child: _buildMenteePodiumPosition(
+                mentee: second,
                 position: 2,
                 height: 120,
-                size: 60,
+                size: 40,
                 cs: cs,
                 t: t,
               ),
@@ -232,10 +300,10 @@ class _TeamScreenState extends State<TeamScreen> {
           // 1st place (center)
           if (first != null)
             Expanded(
-              child: _buildPodiumPosition(
-                team: first,
+              child: _buildMenteePodiumPosition(
+                mentee: first,
                 position: 1,
-                height: 160,
+                height: 120,
                 size: 80,
                 cs: cs,
                 t: t,
@@ -247,10 +315,10 @@ class _TeamScreenState extends State<TeamScreen> {
           // 3rd place (right)
           if (third != null)
             Expanded(
-              child: _buildPodiumPosition(
-                team: third,
+              child: _buildMenteePodiumPosition(
+                mentee: third,
                 position: 3,
-                height: 100,
+                height: 80,
                 size: 50,
                 cs: cs,
                 t: t,
@@ -262,6 +330,7 @@ class _TeamScreenState extends State<TeamScreen> {
   }
 
   Widget _buildPodiumPosition({
+    required BuildContext context,
     required Team team,
     required int position,
     required double height,
@@ -274,28 +343,11 @@ class _TeamScreenState extends State<TeamScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // Team Circle
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: teamColor,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: position == 1 ? Colors.amber : cs.outline.withOpacity(0.3),
-              width: position == 1 ? 3 : 2,
-            ),
-          ),
-          child: Icon(Icons.group, color: Colors.white, size: size * 0.5),
-        ),
-
-        const SizedBox(height: 8),
-
         // Team Name
         Text(
           team.name,
           style: t.labelMedium?.copyWith(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: cs.onSurface,
           ),
           textAlign: TextAlign.center,
@@ -308,6 +360,87 @@ class _TeamScreenState extends State<TeamScreen> {
         // Points
         Text(
           '${team.points} pts',
+          style: t.labelSmall?.copyWith(
+            color: cs.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Podium - use the height parameter passed in
+        Podium(
+          baseColor: teamColor,
+          rank: position,
+          borderRadius: BorderRadius.zero,
+          width: size,
+          height: height,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenteePodiumPosition({
+    required MenteeRanking mentee,
+    required int position,
+    required double height,
+    required double size,
+    required ColorScheme cs,
+    required TextTheme t,
+  }) {
+    final teamColor = mentee.team != null
+        ? _getTeamColor(mentee.team!.color)
+        : cs.primary;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        // Mentee Avatar
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: teamColor.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: position == 1 ? Colors.amber : teamColor.withOpacity(0.5),
+              width: position == 1 ? 3 : 2,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              mentee.mentee.firstName?.substring(0, 1).toUpperCase() ?? '?',
+              style: t.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: teamColor,
+                fontSize: size * 0.4,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Mentee Name
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            mentee.mentee.displayName,
+            style: t.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+
+        const SizedBox(height: 4),
+
+        // Points
+        Text(
+          '${mentee.points} pts',
           style: t.labelSmall?.copyWith(color: cs.onSurfaceVariant),
         ),
 
@@ -315,7 +448,7 @@ class _TeamScreenState extends State<TeamScreen> {
 
         // Podium Base
         Container(
-          height: height - size - 40,
+          height: height - size - 50,
           decoration: BoxDecoration(
             color: position == 1
                 ? Colors.amber.withOpacity(0.2)

@@ -23,3 +23,9 @@ const Color kFontDark = kBgDark; // font-dark  == bg-dark
 /// (Optional) secondary/tertiary seeds if you want more control later.
 const Color kBrandSecondarySeed = Color(0xFF10B981); // emerald-ish
 const Color kBrandTertiarySeed = Color(0xFFEC4899); // pink-ish
+
+/// Team Colors
+const Color kTeamRed = Color(0xFFDC2626); // Red team
+const Color kTeamBlue = Color(0xFF2563EB); // Blue team
+const Color kTeamGreen = Color(0xFF16A34A); // Green team
+const Color kTeamYellow = Color(0xFFF59E0B); // Yellow/Amber team

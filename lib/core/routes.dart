@@ -1,8 +1,8 @@
 class AppRoutes {
   static const homeRoot = '/';
   static const notificationsRoot = '/notifications';
-  static const teamRoot = '/';
-  static const profileRoot = '/';
+  static const teamRoot = '/leaderboard';
+  static const profileRoot = '/profile';
 
   static const eventDetail = '/event';
   static const calendar = '/calendar';
