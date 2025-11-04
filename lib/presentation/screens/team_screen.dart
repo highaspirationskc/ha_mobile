@@ -5,6 +5,7 @@ import '../../business/teams/entities/team.dart';
 import '../../data/services/api_service.dart';
 import '../widgets/tabs.dart';
 import '../widgets/podium.dart';
+import '../widgets/avatar.dart';
 
 class TeamScreen extends StatefulWidget {
   const TeamScreen({super.key});
@@ -188,9 +189,9 @@ class _TeamScreenState extends State<TeamScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top 3 Mentees Podium
+          // Top 3 Mentees Podium (avatars with gradients)
           if (topMentees.isNotEmpty)
-            _buildTopThreeMenteesPodium(topMentees, cs, t),
+            _buildTopThreeMenteesPodium(context, topMentees, cs, t),
 
           const SizedBox(height: 32),
 
@@ -233,7 +234,7 @@ class _TeamScreenState extends State<TeamScreen>
                 context: context,
                 team: second,
                 position: 2,
-                height: 240,
+                height: 220,
                 size: screenWidth * 0.28,
                 cs: cs,
                 t: t,
@@ -245,7 +246,7 @@ class _TeamScreenState extends State<TeamScreen>
                 context: context,
                 team: first,
                 position: 1,
-                height: 280,
+                height: 240,
                 size: screenWidth * 0.32,
                 cs: cs,
                 t: t,
@@ -269,6 +270,7 @@ class _TeamScreenState extends State<TeamScreen>
   }
 
   Widget _buildTopThreeMenteesPodium(
+    BuildContext context,
     List<MenteeRanking> mentees,
     ColorScheme cs,
     TextTheme t,
@@ -278,7 +280,7 @@ class _TeamScreenState extends State<TeamScreen>
     final third = mentees.length > 2 ? mentees[2] : null;
 
     return Container(
-      height: 200,
+      height: 220,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -289,7 +291,7 @@ class _TeamScreenState extends State<TeamScreen>
                 mentee: second,
                 position: 2,
                 height: 120,
-                size: 40,
+                size: 60,
                 cs: cs,
                 t: t,
               ),
@@ -304,7 +306,7 @@ class _TeamScreenState extends State<TeamScreen>
                 mentee: first,
                 position: 1,
                 height: 120,
-                size: 80,
+                size: 108,
                 cs: cs,
                 t: t,
               ),
@@ -319,7 +321,7 @@ class _TeamScreenState extends State<TeamScreen>
                 mentee: third,
                 position: 3,
                 height: 80,
-                size: 50,
+                size: 60,
                 cs: cs,
                 t: t,
               ),
@@ -342,20 +344,24 @@ class _TeamScreenState extends State<TeamScreen>
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Team Name
-        Text(
-          team.name,
-          style: t.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: cs.onSurface,
+        Flexible(
+          child: Text(
+            team.name,
+            style: t.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: cs.onSurface,
+              fontSize: 11,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
 
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
 
         // Points
         Text(
@@ -363,10 +369,11 @@ class _TeamScreenState extends State<TeamScreen>
           style: t.labelSmall?.copyWith(
             color: cs.onSurfaceVariant,
             fontWeight: FontWeight.w600,
+            fontSize: 10,
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
 
         // Podium - use the height parameter passed in
         Podium(
@@ -388,84 +395,99 @@ class _TeamScreenState extends State<TeamScreen>
     required ColorScheme cs,
     required TextTheme t,
   }) {
+    // Gradient height extending downward from avatar middle
+    final gradientHeight = height + 100.0; // Extends down past the avatar
+
+    // Get team color, fallback to white if no team
     final teamColor = mentee.team != null
         ? _getTeamColor(mentee.team!.color)
-        : cs.primary;
+        : Colors.white;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Mentee Avatar
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: teamColor.withOpacity(0.1),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: position == 1 ? Colors.amber : teamColor.withOpacity(0.5),
-              width: position == 1 ? 3 : 2,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              mentee.mentee.firstName?.substring(0, 1).toUpperCase() ?? '?',
-              style: t.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: teamColor,
-                fontSize: size * 0.4,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
         // Mentee Name
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            mentee.mentee.displayName,
-            style: t.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              mentee.mentee.displayName,
+              style: t.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
 
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
 
         // Points
         Text(
           '${mentee.points} pts',
-          style: t.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+          style: t.labelSmall?.copyWith(
+            color: cs.onSurfaceVariant,
+            fontSize: 10,
+          ),
         ),
 
-        const SizedBox(height: 12),
-
-        // Podium Base
-        Container(
-          height: height - size - 50,
-          decoration: BoxDecoration(
-            color: position == 1
-                ? Colors.amber.withOpacity(0.2)
-                : cs.surfaceVariant.withOpacity(0.5),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-            border: Border.all(
-              color: position == 1 ? Colors.amber : cs.outline.withOpacity(0.3),
-            ),
-          ),
-          child: Center(
-            child: Text(
-              position.toString(),
-              style: t.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: position == 1 ? Colors.amber[700] : cs.onSurfaceVariant,
+        const SizedBox(height: 4),
+        // Avatar with gradient behind it
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            // Gradient container starting from middle of avatar
+            Positioned(
+              top: size / 2, // Start from middle of avatar
+              child: Container(
+                width: size,
+                height: gradientHeight,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      teamColor.withOpacity(0.8), // Solid at top
+                      teamColor.withOpacity(0.0), // Transparent at bottom
+                    ],
+                  ),
+                ),
               ),
             ),
+
+            // Avatar on top with border
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: teamColor, width: 4),
+              ),
+              child: Avatar(
+                firstName: mentee.mentee.firstName,
+                lastName: mentee.mentee.lastName,
+                image: mentee.mentee.image,
+                colorIndex: mentee.mentee.colorIndex,
+                size: size - 4, // Subtract border width (2px on each side)
+                editable: false,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 2),
+
+        // Rank number
+        Text(
+          '$position',
+          style: t.labelLarge?.copyWith(
+            fontSize: 36,
+            fontWeight: FontWeight.w700,
+            color: position == 1 ? Colors.white : cs.onSurfaceVariant,
           ),
         ),
       ],
@@ -477,7 +499,7 @@ class _TeamScreenState extends State<TeamScreen>
       title,
       style: t.headlineSmall?.copyWith(
         fontWeight: FontWeight.w700,
-        color: cs.onSurface,
+        color: cs.surface,
       ),
     );
   }

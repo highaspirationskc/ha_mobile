@@ -31,14 +31,14 @@ class Podium extends StatelessWidget {
 
     // We'll also add a subtle front gradient so it's not flat.
     final Color frontTop = _lighten(baseColor, 0.15);
-    final Color frontBottom = _darken(baseColor, 0.25);
+    final Color frontBottom = baseColor.withOpacity(0.0); // Transparent bottom
 
     // Adjust height based on rank
     final double adjustedHeight = rank == 1
         ? height
         : rank == 2
-        ? height * 2 / 3
-        : height / 3;
+        ? height * .7
+        : height * .6;
 
     return SizedBox(
       width: width,
@@ -53,8 +53,8 @@ class Podium extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: borderRadius,
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                   colors: [frontTop, frontBottom],
                 ),
               ),
@@ -84,13 +84,13 @@ class Podium extends StatelessWidget {
                   children: [
                     SvgPicture.asset(
                       'assets/icons/wreath.svg',
-                      width: 120,
-                      height: 120,
+                      width: 100,
+                      height: 100,
                     ),
                     Text(
                       '1',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 48,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         shadows: [
@@ -110,7 +110,7 @@ class Podium extends StatelessWidget {
           // Number for rank 2
           if (rank == 2)
             Positioned(
-              top: topHeight + 24, // 24px from top of front edge
+              top: topHeight + 16, // 24px from top of front edge
               left: 0,
               right: 0,
               child: Center(
@@ -135,7 +135,7 @@ class Podium extends StatelessWidget {
           // Number for rank 3
           if (rank == 3)
             Positioned(
-              top: topHeight + 24, // 24px from top of front edge
+              top: topHeight + 16, // 24px from top of front edge
               left: 0,
               right: 0,
               child: Center(
@@ -167,16 +167,9 @@ class Podium extends StatelessWidget {
     // amount: 0 -> no change, 1 -> white
     final hsl = HSLColor.fromColor(c);
     final hslLight = hsl.withLightness(
-      (hsl.lightness + amount).clamp(0.0, 1.0),
+      (hsl.lightness + amount).clamp(0.0, .75),
     );
     return hslLight.toColor();
-  }
-
-  Color _darken(Color c, double amount) {
-    // amount: 0 -> no change, 1 -> black
-    final hsl = HSLColor.fromColor(c);
-    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
-    return hslDark.toColor();
   }
 }
 

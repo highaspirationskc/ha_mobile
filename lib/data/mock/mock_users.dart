@@ -94,6 +94,8 @@ final List<User> mockMentees = [
     email: 'emma.brown@example.com',
     firstName: 'Emma',
     lastName: 'Brown',
+    image:
+        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop',
     colorIndex: 4,
     roles: const {UserRole.mentee},
   ),
@@ -102,6 +104,8 @@ final List<User> mockMentees = [
     email: 'carlos.lopez@example.com',
     firstName: 'Carlos',
     lastName: 'Lopez',
+    image:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
     colorIndex: 5,
     roles: const {UserRole.mentee},
   ),
@@ -120,6 +124,8 @@ final List<User> mockMentees = [
     email: 'tyler.kim@example.com',
     firstName: 'Tyler',
     lastName: 'Kim',
+    image:
+        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=400&auto=format&fit=crop',
     colorIndex: 8,
     roles: const {UserRole.mentee},
   ),
@@ -128,6 +134,8 @@ final List<User> mockMentees = [
     email: 'zoe.martinez@example.com',
     firstName: 'Zoe',
     lastName: 'Martinez',
+    image:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop',
     colorIndex: 9,
     roles: const {UserRole.mentee},
   ),
@@ -136,6 +144,8 @@ final List<User> mockMentees = [
     email: 'justin.wilson@example.com',
     firstName: 'Justin',
     lastName: 'Wilson',
+    image:
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400&auto=format&fit=crop',
     colorIndex: 10,
     roles: const {UserRole.mentee},
   ),
@@ -144,6 +154,8 @@ final List<User> mockMentees = [
     email: 'maya.thompson@example.com',
     firstName: 'Maya',
     lastName: 'Thompson',
+    image:
+        'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop',
     colorIndex: 11,
     roles: const {UserRole.mentee},
   ),
@@ -152,6 +164,8 @@ final List<User> mockMentees = [
     email: 'liam.anderson@example.com',
     firstName: 'Liam',
     lastName: 'Anderson',
+    image:
+        'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop',
     colorIndex: 0,
     roles: const {UserRole.mentee},
   ),
@@ -160,6 +174,8 @@ final List<User> mockMentees = [
     email: 'sofia.rodriguez@example.com',
     firstName: 'Sofia',
     lastName: 'Rodriguez',
+    image:
+        'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?q=80&w=400&auto=format&fit=crop',
     colorIndex: 1,
     roles: const {UserRole.mentee},
   ),
@@ -168,6 +184,8 @@ final List<User> mockMentees = [
     email: 'noah.jackson@example.com',
     firstName: 'Noah',
     lastName: 'Jackson',
+    image:
+        'https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=400&auto=format&fit=crop',
     colorIndex: 2,
     roles: const {UserRole.mentee},
   ),
@@ -176,6 +194,8 @@ final List<User> mockMentees = [
     email: 'isabella.white@example.com',
     firstName: 'Isabella',
     lastName: 'White',
+    image:
+        'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=400&auto=format&fit=crop',
     colorIndex: 3,
     roles: const {UserRole.mentee},
   ),
