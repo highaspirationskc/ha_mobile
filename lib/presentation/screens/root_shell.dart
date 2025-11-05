@@ -6,6 +6,7 @@ import '../../core/session.dart'; // currentUserKind, CurrentUserKind
 
 import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
+import '../widgets/avatar.dart';
 
 // Screens (body-only)
 import 'home/home_screen.dart';
@@ -231,63 +232,82 @@ class _RootShellState extends State<RootShell> {
     },
   );
 
-  _Tab _profileTab() => _Tab(
-    label: 'Profile',
-    icon: const Icon(Icons.person_outline),
-    selectedIcon: const Icon(Icons.person),
-    key: _profileKey,
-    observers: [_profileObs],
-    rootName: AppRoutes.profileRoot,
-    onGenerateRoute: (settings) {
-      switch (settings.name) {
-        case AppRoutes.profileRoot:
-          return MaterialPageRoute(
-            builder: (_) => const ProfileScreen(),
-            settings: const RouteSettings(name: AppRoutes.profileRoot),
-          );
-        case AppRoutes.communityService:
-          return MaterialPageRoute(
-            builder: (_) => const CommunityServiceScreen(),
-            settings: const RouteSettings(name: AppRoutes.communityService),
-          );
-        case AppRoutes.pulses:
-          return MaterialPageRoute(
-            builder: (_) => const PulsesScreen(),
-            settings: const RouteSettings(name: AppRoutes.pulses),
-          );
-        case AppRoutes.team:
-          // Legacy route - redirect to team screen for backwards compatibility
-          return MaterialPageRoute(
-            builder: (_) => const TeamScreen(),
-            settings: const RouteSettings(name: AppRoutes.team),
-          );
-        case AppRoutes.notificationsRoot:
-          return MaterialPageRoute(
-            builder: (_) => const NotificationsScreen(),
-            settings: const RouteSettings(name: AppRoutes.notificationsRoot),
-          );
-        case AppRoutes.notificationMessage:
-          final id = settings.arguments as String?;
-          return MaterialPageRoute(
-            builder: (_) => MessageScreen(messageId: id),
-            settings: const RouteSettings(name: AppRoutes.notificationMessage),
-          );
-        default:
-          return MaterialPageRoute(
-            builder: (_) => const ProfileScreen(),
-            settings: const RouteSettings(name: AppRoutes.profileRoot),
-          );
-      }
-    },
-    titleForRoute: (name) => switch (name) {
-      AppRoutes.communityService => 'Community Service',
-      AppRoutes.pulses => 'Pulses',
-      AppRoutes.team => 'Team',
-      AppRoutes.notificationsRoot => 'Notifications',
-      AppRoutes.notificationMessage => 'Message',
-      _ => 'Profile',
-    },
-  );
+  _Tab _profileTab() {
+    final user = currentUser;
+    return _Tab(
+      label: 'Profile',
+      icon: Avatar(
+        firstName: user.firstName,
+        lastName: user.lastName,
+        image: user.image,
+        colorIndex: user.colorIndex,
+        size: 28,
+        editable: false,
+      ),
+      selectedIcon: Avatar(
+        firstName: user.firstName,
+        lastName: user.lastName,
+        image: user.image,
+        colorIndex: user.colorIndex,
+        size: 28,
+        editable: false,
+      ),
+      key: _profileKey,
+      observers: [_profileObs],
+      rootName: AppRoutes.profileRoot,
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case AppRoutes.profileRoot:
+            return MaterialPageRoute(
+              builder: (_) => const ProfileScreen(),
+              settings: const RouteSettings(name: AppRoutes.profileRoot),
+            );
+          case AppRoutes.communityService:
+            return MaterialPageRoute(
+              builder: (_) => const CommunityServiceScreen(),
+              settings: const RouteSettings(name: AppRoutes.communityService),
+            );
+          case AppRoutes.pulses:
+            return MaterialPageRoute(
+              builder: (_) => const PulsesScreen(),
+              settings: const RouteSettings(name: AppRoutes.pulses),
+            );
+          case AppRoutes.team:
+            // Legacy route - redirect to team screen for backwards compatibility
+            return MaterialPageRoute(
+              builder: (_) => const TeamScreen(),
+              settings: const RouteSettings(name: AppRoutes.team),
+            );
+          case AppRoutes.notificationsRoot:
+            return MaterialPageRoute(
+              builder: (_) => const NotificationsScreen(),
+              settings: const RouteSettings(name: AppRoutes.notificationsRoot),
+            );
+          case AppRoutes.notificationMessage:
+            final id = settings.arguments as String?;
+            return MaterialPageRoute(
+              builder: (_) => MessageScreen(messageId: id),
+              settings: const RouteSettings(
+                name: AppRoutes.notificationMessage,
+              ),
+            );
+          default:
+            return MaterialPageRoute(
+              builder: (_) => const ProfileScreen(),
+              settings: const RouteSettings(name: AppRoutes.profileRoot),
+            );
+        }
+      },
+      titleForRoute: (name) => switch (name) {
+        AppRoutes.communityService => 'Community Service',
+        AppRoutes.pulses => 'Pulses',
+        AppRoutes.team => 'Team',
+        AppRoutes.notificationsRoot => 'Notifications',
+        AppRoutes.notificationMessage => 'Message',
+        _ => 'Profile',
+      },
+    );
+  }
 
   Future<bool> _onWillPop(List<_Tab> tabs) async {
     final key = [
@@ -360,6 +380,9 @@ class _RootShellState extends State<RootShell> {
         // Count unread messages for notification badge
         final unreadCount = mockMessages.where((msg) => !msg.read).length;
 
+        // Get current user for avatar
+        final user = currentUser;
+
         // Build NavigationBar destinations (notifications removed, add removed)
         final navItems = <(Widget, Widget, String)>[
           (const Icon(Icons.home_outlined), const Icon(Icons.home), 'Home'),
@@ -375,8 +398,22 @@ class _RootShellState extends State<RootShell> {
             'Teams',
           ),
           (
-            const Icon(Icons.person_outline),
-            const Icon(Icons.person),
+            Avatar(
+              firstName: user.firstName,
+              lastName: user.lastName,
+              image: user.image,
+              colorIndex: user.colorIndex,
+              size: 28,
+              editable: false,
+            ),
+            Avatar(
+              firstName: user.firstName,
+              lastName: user.lastName,
+              image: user.image,
+              colorIndex: user.colorIndex,
+              size: 28,
+              editable: false,
+            ),
             'Profile',
           ),
         ];
