@@ -473,7 +473,7 @@ class _TeamScreenState extends State<TeamScreen>
                 image: mentee.mentee.image,
                 colorIndex: mentee.mentee.colorIndex,
                 size: size - 4, // Subtract border width (2px on each side)
-                editable: false,
+                editable: false, 
               ),
             ),
           ],

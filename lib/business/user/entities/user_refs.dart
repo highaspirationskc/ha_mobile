@@ -1,10 +1,12 @@
-/// Lightweight references so we don’t need full objects everywhere.
+/// Lightweight references so we don't need full objects everywhere.
 class UserRef {
   final String id;
   final String? firstName;
   final String? lastName;
   final String? image; // asset/file/url
   final int? colorIndex; // 0..kProfileColors.length-1
+  final String? phone;
+  final String? email;
 
   const UserRef({
     required this.id,
@@ -12,6 +14,8 @@ class UserRef {
     this.lastName,
     this.image,
     this.colorIndex,
+    this.phone,
+    this.email,
   });
 
   String get displayName =>

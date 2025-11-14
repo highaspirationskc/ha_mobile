@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../business/events/entities/event.dart';
-import '../../../data/mock/mock_data.dart';
-import '../../../core/routes.dart';
-import '../../widgets/this_saturday_card.dart';
+import '../../business/events/entities/event.dart';
+import '../../data/mock/mock_data.dart';
+import '../../core/routes.dart';
+import '../../presentation/widgets/this_saturday_card.dart';
 
 class ThisSaturdaySection extends StatelessWidget {
   const ThisSaturdaySection({super.key});

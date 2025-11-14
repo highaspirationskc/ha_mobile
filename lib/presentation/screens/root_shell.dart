@@ -9,7 +9,7 @@ import '../widgets/ha_nav_bar.dart';
 import '../widgets/avatar.dart';
 
 // Screens (body-only)
-import 'home/home_screen.dart';
+import '../../features/home/home_screen.dart';
 import 'notifications_screen.dart';
 import 'message_screen.dart';
 import 'profile_screen.dart';
@@ -18,7 +18,7 @@ import 'calendar_screen.dart';
 import 'scoop_detail_screen.dart';
 import 'past_scoops_screen.dart';
 import 'check_in_scanner.dart';
-import 'mentees_list_screen.dart';
+import '../../features/mentees/mentees_list_screen.dart';
 import 'community_service_screen.dart';
 import 'pulses_screen.dart';
 import 'team_screen.dart';

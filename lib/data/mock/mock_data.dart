@@ -162,9 +162,33 @@ final List<User> mockUsers = [
 /// Quick lookups
 final Map<String, User> mockUsersById = {for (final u in mockUsers) u.id: u};
 
+/// Mock parent for Jordan Lee
+final User mockParent = User(
+  id: 'u_parent_1',
+  email: 'patricia.lee@example.com',
+  firstName: 'Patricia',
+  lastName: 'Lee',
+  phone: '+1 (555) 123-4567',
+  image:
+      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop',
+  colorIndex: 5,
+  roles: const {},
+);
+
 /// Role data
 final MenteeData mockMenteeData = MenteeData(
   userId: mockMentee.id,
+  parents: [
+    UserRef(
+      id: mockParent.id,
+      firstName: mockParent.firstName,
+      lastName: mockParent.lastName,
+      image: mockParent.image,
+      colorIndex: mockParent.colorIndex,
+      phone: mockParent.phone,
+      email: mockParent.email,
+    ),
+  ],
   mentor: UserRef(
     id: mockMentor.id,
     firstName: mockMentor.firstName,

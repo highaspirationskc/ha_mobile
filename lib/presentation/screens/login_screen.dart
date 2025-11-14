@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ha_mobile/presentation/widgets/wave_panel.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../core/session.dart';
-import '../../data/services/api_service.dart';
+import '../../data/services/auth_service.dart';
 import '../../data/services/auth_storage.dart';
 import '../widgets/button_long.dart';
 import '../screens/root_shell.dart';
@@ -39,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final authResponse = await ApiService.instance.login(
+      final authResponse = await AuthService.instance.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );

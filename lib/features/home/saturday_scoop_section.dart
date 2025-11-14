@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../business/scoops/entities/scoop.dart';
-import '../../../data/mock/mock_data.dart';
-import '../../../core/routes.dart';
-import '../../widgets/list_tile_scoop.dart';
+import '../../business/scoops/entities/scoop.dart';
+import '../../data/mock/mock_data.dart';
+import '../../core/routes.dart';
+import '../../presentation/widgets/list_tile_scoop.dart';
 
 class SaturdayScoopSection extends StatelessWidget {
   const SaturdayScoopSection({super.key});

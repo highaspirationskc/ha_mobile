@@ -4,21 +4,24 @@ import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../business/community_service/entities/community_service.dart';
 import '../../business/user/entities/role_mentee.dart';
+import '../../business/user/entities/user.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
-import '../../business/auth/entities/auth_response.dart';
 import '../../data/mock/mock_data.dart';
 import '../mock/mock_leaderboard.dart';
+import '../mock/mock_users.dart';
+import '../graphql/graphql_client.dart';
+import '../graphql/documents/queries/queries.dart';
 
 class ApiService {
   ApiService._() {
     _initializeMockData();
-    _initializeGraphQLClient();
+    _graphQLClient = GraphQLClientService.instance;
+    _graphQLClient.initialize();
   }
   static final instance = ApiService._();
 
-  late GraphQLClient _client;
-  String? _authToken;
+  late final GraphQLClientService _graphQLClient;
 
   /// Broadcast-only: increments whenever registrations/check-ins change.
   final ValueNotifier<int> changes = ValueNotifier<int>(0);
@@ -27,19 +30,6 @@ class ApiService {
   final Map<String, Set<String>> _checkins = {};
   final Map<String, List<CommunityService>> _communityServices = {};
   final Map<String, List<Pulse>> _pulses = {};
-
-  /// Initialize GraphQL client
-  void _initializeGraphQLClient() {
-    final httpLink = HttpLink('https://api.highaspirationskc.org/graphql');
-
-    final authLink = AuthLink(
-      getToken: () async => _authToken != null ? 'Bearer $_authToken' : null,
-    );
-
-    final link = authLink.concat(httpLink);
-
-    _client = GraphQLClient(cache: GraphQLCache(), link: link);
-  }
 
   /// Initialize with some mock check-in data for testing
   void _initializeMockData() {
@@ -55,62 +45,6 @@ class ApiService {
       'evt_7', // Hack Night
     };
   }
-
-  /// Login with email and password
-  Future<AuthResponse> login({
-    required String email,
-    required String password,
-  }) async {
-    const loginMutation = r'''
-      mutation Login($input: LoginInput!) {
-        login(input: $input) {
-          token
-          user {
-            id
-            email
-          }
-        }
-      }
-    ''';
-
-    final result = await _client.mutate(
-      MutationOptions(
-        document: gql(loginMutation),
-        variables: {
-          'input': {'email': email, 'password': password},
-        },
-      ),
-    );
-
-    if (result.hasException) {
-      if (kDebugMode) {
-        print('Login error: ${result.exception.toString()}');
-      }
-      throw Exception(
-        result.exception?.graphqlErrors.isNotEmpty == true
-            ? result.exception!.graphqlErrors.first.message
-            : 'Login failed. Please check your credentials.',
-      );
-    }
-
-    final data = result.data?['login'];
-    if (data == null) {
-      throw Exception('Invalid response from server');
-    }
-
-    final authResponse = AuthResponse.fromJson(data);
-    _authToken = authResponse.token;
-
-    return authResponse;
-  }
-
-  /// Logout and clear auth token
-  void logout() {
-    _authToken = null;
-  }
-
-  /// Check if user is authenticated
-  bool get isAuthenticated => _authToken != null;
 
   Future<void> registerForEvent({
     required String eventId,
@@ -214,6 +148,78 @@ class ApiService {
   Future<MenteeData?> getMenteeData({required String userId}) async {
     await Future.delayed(const Duration(milliseconds: 150));
     return mockMenteesByUserId[userId];
+  }
+
+  /// Gets all mentees assigned to a specific mentor
+  Future<List<User>> getMenteesByMentor({required String mentorId}) async {
+    if (kDebugMode) {
+      print('🔍 Fetching mentees for mentor: $mentorId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getMenteesByMentorQuery),
+          variables: {'mentorId': mentorId},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (kDebugMode) {
+        print('📦 Mentees query response:');
+        print('   Has exception: ${result.hasException}');
+        print('   Has data: ${result.data != null}');
+        if (result.hasException) {
+          print('   Exception: ${result.exception}');
+        }
+        if (result.data != null) {
+          print('   Data: ${result.data}');
+        }
+      }
+
+      if (result.hasException) {
+        // If there's a network/GraphQL error, fall back to mock data
+        if (kDebugMode) {
+          print('⚠️ Error fetching mentees, using mock data');
+        }
+        // Return a subset of mock mentees (simulate mentor having 3-5 mentees)
+        return allMockMentees.take(5).toList();
+      }
+
+      final menteesList = result.data?['menteesByMentor'] as List<dynamic>?;
+      if (menteesList == null) {
+        if (kDebugMode) {
+          print('⚠️ No mentees data in response, using mock data');
+        }
+        return allMockMentees.take(5).toList();
+      }
+
+      // Parse the mentees from GraphQL response
+      final mentees = menteesList.map((json) {
+        return User(
+          id: json['id'] as String,
+          email: json['email'] as String,
+          firstName: json['firstName'] as String?,
+          lastName: json['lastName'] as String?,
+          phone: json['phone'] as String?,
+          image: json['image'] as String?,
+          colorIndex: json['colorIndex'] as int?,
+        );
+      }).toList();
+
+      if (kDebugMode) {
+        print('✅ Fetched ${mentees.length} mentees');
+      }
+
+      return mentees;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Exception fetching mentees: $e');
+        print('   Using mock data as fallback');
+      }
+      // On any error, return mock data
+      return allMockMentees.take(5).toList();
+    }
   }
 
   /// Gets the total attendance count (check-ins) for a user

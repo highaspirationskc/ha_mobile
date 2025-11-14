@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../../business/leaderboard/entities/leaderboard.dart';
-import '../../../data/services/api_service.dart';
-import '../../../core/theme/color_schemes.dart';
+import '../../business/leaderboard/entities/leaderboard.dart';
+import '../../data/services/api_service.dart';
+import '../../core/theme/color_schemes.dart';
 
 class MenteeSpotlightSection extends StatefulWidget {
   const MenteeSpotlightSection({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../data/mock/mock_data.dart';
-import '../../../core/routes.dart';
-import '../../widgets/saturday_scoop_small.dart';
+import '../../data/mock/mock_data.dart';
+import '../../core/routes.dart';
+import '../../presentation/widgets/saturday_scoop_small.dart';
 
 class PastScoopsSection extends StatelessWidget {
   const PastScoopsSection({super.key});

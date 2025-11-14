@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../widgets/bottom_sheet_community_service.dart';
-import '../../widgets/bottom_sheet_pulse.dart';
+import '../../presentation/widgets/bottom_sheet_community_service.dart';
+import '../../presentation/widgets/bottom_sheet_pulse.dart';
 
 class AddSection extends StatelessWidget {
   const AddSection({super.key});

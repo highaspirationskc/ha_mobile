@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../data/mock/mock_data.dart';
-import '../../../core/routes.dart';
-import '../../widgets/card_event.dart';
+import '../../data/mock/mock_data.dart';
+import '../../core/routes.dart';
+import '../../presentation/widgets/card_event.dart';
 
 class UpcomingEventsSection extends StatelessWidget {
   const UpcomingEventsSection({super.key});
