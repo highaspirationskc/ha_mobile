@@ -50,7 +50,6 @@ class _MenteeScreenState extends State<MenteeScreen> {
     final t = Theme.of(context).textTheme;
 
     return Scaffold(
-      // appBar: AppBar(),
       body: SingleChildScrollView(
         child: Column(
           children: [
