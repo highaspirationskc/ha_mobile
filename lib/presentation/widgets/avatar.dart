@@ -196,7 +196,7 @@ class _AvatarState extends State<Avatar> {
     await showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      useRootNavigator: false,
+      useRootNavigator: true,
       builder: (ctx) {
         return SafeArea(
           child: Column(

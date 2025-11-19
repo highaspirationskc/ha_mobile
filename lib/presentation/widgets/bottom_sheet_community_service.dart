@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ha_mobile/presentation/widgets/button_long.dart';
-import 'package:ha_mobile/presentation/widgets/button_long_outlined.dart';
 import '../../data/services/api_service.dart';
 import '../../core/session.dart';
 
@@ -35,239 +33,229 @@ class _BottomSheetCommunityServiceState
     final t = Theme.of(context).textTheme;
 
     return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Center(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            // Header with X and Save buttons
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: cs.outlineVariant.withOpacity(0.5)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Close button
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Close',
+                  ),
+                  const Spacer(),
+                  // Save button
+                  IconButton(
+                    onPressed: _isLoading ? null : _saveCommunityService,
+                    icon: const Icon(Icons.check),
+                    tooltip: 'Save',
+                  ),
+                ],
+              ),
+            ),
+
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Title
                     Text(
                       'Community Service',
                       style: t.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: cs.onSurface,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 24),
+
+                    // Name Field
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Event:',
+                          style: t.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              hintText: 'What did you do?',
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter a name';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Divider
+                    Divider(color: cs.outlineVariant.withOpacity(0.5)),
+
+                    // Description Field
+                    const SizedBox(height: 8),
                     Text(
-                      'Add your community service event.',
-                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                      'Description:',
+                      style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Describe your activity',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a description';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    // Divider
+                    Divider(color: cs.outlineVariant.withOpacity(0.5)),
+
+                    // Date Field
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Date:',
+                          style: t.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            onTap: _selectDate,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}',
+                                      style: t.bodyLarge,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.calendar_today,
+                                    color: cs.onSurfaceVariant,
+                                    size: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Divider
+                    Divider(color: cs.outlineVariant.withOpacity(0.5)),
+
+                    // Hours Field
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Hours:',
+                          style: t.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              // Decrement Button
+                              InkWell(
+                                onTap: _hours > 0
+                                    ? () => setState(() => _hours--)
+                                    : null,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: cs.primary,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.remove,
+                                    color: cs.onPrimary,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(width: 16),
+
+                              // Hours Display
+                              Text(
+                                _hours.toString().padLeft(2, '0'),
+                                style: t.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(width: 16),
+
+                              // Increment Button
+                              InkWell(
+                                onTap: () => setState(() => _hours++),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: cs.primary,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.add, color: cs.onPrimary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 32),
-
-              // Name Field
-              Text(
-                'Name',
-                style: t.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  hintText: 'What did you do?',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: cs.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: cs.outline),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: cs.primary, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: cs.surfaceVariant.withOpacity(0.3),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a name';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              // Description Field
-              Text(
-                'Description',
-                style: t.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Describe your community service activity',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: cs.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: cs.outline),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: cs.primary, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: cs.surfaceVariant.withOpacity(0.3),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a description';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              // Date Field
-              Text(
-                'Date',
-                style: t.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: _selectDate,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: cs.outline),
-                    borderRadius: BorderRadius.circular(12),
-                    color: cs.surfaceVariant.withOpacity(0.3),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                          style: t.bodyLarge?.copyWith(color: cs.onSurface),
-                        ),
-                      ),
-                      Icon(
-                        Icons.calendar_today,
-                        color: cs.onSurfaceVariant,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Hours Field
-              Text(
-                'Hours',
-                style: t.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  // Decrement Button
-                  InkWell(
-                    onTap: _hours > 0 ? () => setState(() => _hours--) : null,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: cs.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.remove, color: cs.onPrimary, size: 24),
-                    ),
-                  ),
-
-                  const SizedBox(width: 16),
-
-                  // Hours Display
-                  Container(
-                    width: 80,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: cs.surfaceVariant.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: cs.outline),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _hours.toString().padLeft(2, '0'),
-                        style: t.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 16),
-
-                  // Increment Button
-                  InkWell(
-                    onTap: () => setState(() => _hours++),
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: cs.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.add, color: cs.onPrimary, size: 24),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // Save Button
-              ButtonLong(
-                label: 'Save',
-                onPressed: _isLoading ? null : _saveCommunityService,
-              ),
-              const SizedBox(height: 12),
-              ButtonLongOutlined(
-                label: 'Cancel',
-                onPressed: _isLoading
-                    ? null
-                    : () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

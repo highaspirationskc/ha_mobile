@@ -225,6 +225,7 @@ void showMessageBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    useRootNavigator: true,
     builder: (context) => MessageBottomSheet(
       recipientName: recipientName,
       recipientId: recipientId,

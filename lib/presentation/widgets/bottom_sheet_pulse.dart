@@ -1,7 +1,5 @@
 // lib/presentation/widgets/bottom_sheet_pulse.dart
 import 'package:flutter/material.dart';
-import 'package:ha_mobile/presentation/widgets/button_long.dart';
-import 'package:ha_mobile/presentation/widgets/button_long_outlined.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../core/session.dart';
 import '../../data/services/api_service.dart';
@@ -86,184 +84,205 @@ class _BottomSheetPulseState extends State<BottomSheetPulse> {
     final t = Theme.of(context).textTheme;
 
     return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            // Header with X and Save buttons
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: cs.outlineVariant.withOpacity(0.5)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Close button
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Close',
+                  ),
+                  const Spacer(),
+                  // Save button
+                  IconButton(
+                    onPressed: _isSubmitting ? null : _submitPulse,
+                    icon: const Icon(Icons.check),
+                    tooltip: 'Save',
+                  ),
+                ],
+              ),
+            ),
+
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'What\'s the Pulse?',
-                            style: t.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Share how your week is going',
-                            style: t.bodyMedium?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                    // Title
+                    Text(
+                      'How\'s your week going?',
+                      style: t.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Share how your week is going',
+                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Rating Section
+                    Text(
+                      'How has your week been?',
+                      style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final starIndex = index + 1;
+                        return GestureDetector(
+                          onTap: () => setState(() => _rating = starIndex),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              starIndex <= _rating
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: cs.primary,
+                              size: 32,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+
+                    const SizedBox(height: 16),
+                    Divider(color: cs.outlineVariant.withOpacity(0.5)),
+
+                    // Highlight Section
+                    const SizedBox(height: 8),
+                    Text(
+                      'Highlight:',
+                      style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _highlightController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Share something positive that happened...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please share a highlight';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    Divider(color: cs.outlineVariant.withOpacity(0.5)),
+
+                    // Challenge Section
+                    const SizedBox(height: 8),
+                    Text(
+                      'Challenge:',
+                      style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _challengeController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText:
+                            'Describe any difficulties you encountered...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please describe a challenge';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    Divider(color: cs.outlineVariant.withOpacity(0.5)),
+
+                    // Thoughts Section
+                    const SizedBox(height: 8),
+                    Text(
+                      'On Your Mind:',
+                      style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _thoughtsController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Share any thoughts or concerns...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please share your thoughts';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    Divider(color: cs.outlineVariant.withOpacity(0.5)),
+                    const SizedBox(height: 8),
+
+                    // Support Topics Section
+                    Text(
+                      'Support Topics:',
+                      style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: SupportTopic.values.map((topic) {
+                        final isSelected = _selectedTopics.contains(topic);
+                        return FilterChip(
+                          label: Text(_getTopicLabel(topic)),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedTopics.add(topic);
+                              } else {
+                                _selectedTopics.remove(topic);
+                              }
+                            });
+                          },
+                          selectedColor: cs.primaryContainer,
+                          checkmarkColor: cs.onPrimaryContainer,
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-
-                // Rating Section
-                Text(
-                  'How has your week been?',
-                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    final starIndex = index + 1;
-                    return GestureDetector(
-                      onTap: () => setState(() => _rating = starIndex),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Icon(
-                          starIndex <= _rating ? Icons.star : Icons.star_border,
-                          color: cs.primary,
-                          size: 32,
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 24),
-
-                // Highlight Section
-                Text(
-                  'What was a highlight of the week?',
-                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _highlightController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Share something positive that happened...',
-                    filled: true,
-                    fillColor: cs.surfaceVariant.withOpacity(0.3),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please share a highlight';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Challenge Section
-                Text(
-                  'What was a challenge you faced this week?',
-                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _challengeController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Describe any difficulties you encountered...',
-                    filled: true,
-                    fillColor: cs.surfaceVariant.withOpacity(0.3),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please describe a challenge';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Thoughts Section
-                Text(
-                  'What\'s been on your mind?',
-                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _thoughtsController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Share any thoughts or concerns...',
-                    filled: true,
-                    fillColor: cs.surfaceVariant.withOpacity(0.3),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please share your thoughts';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Support Topics Section
-                Text(
-                  'What would you like support with?',
-                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: SupportTopic.values.map((topic) {
-                    final isSelected = _selectedTopics.contains(topic);
-                    return FilterChip(
-                      label: Text(_getTopicLabel(topic)),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedTopics.add(topic);
-                          } else {
-                            _selectedTopics.remove(topic);
-                          }
-                        });
-                      },
-                      selectedColor: cs.primaryContainer,
-                      checkmarkColor: cs.onPrimaryContainer,
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 32),
-
-                // Submit Button
-                ButtonLong(
-                  label: 'Save Pulse',
-                  onPressed: _isSubmitting ? null : _submitPulse,
-                ),
-                const SizedBox(height: 12),
-                ButtonLongOutlined(
-                  label: 'Cancel',
-                  onPressed: _isSubmitting
-                      ? null
-                      : () => Navigator.of(context).pop(),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

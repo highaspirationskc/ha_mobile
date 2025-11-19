@@ -32,7 +32,7 @@ class AddSection extends StatelessWidget {
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
-                    useRootNavigator: false,
+                    useRootNavigator: true,
                     builder: (context) => const BottomSheetCommunityService(),
                   );
                 },
@@ -48,7 +48,7 @@ class AddSection extends StatelessWidget {
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
-                    useRootNavigator: false,
+                    useRootNavigator: true,
                     builder: (context) => const BottomSheetPulse(),
                   );
                 },
