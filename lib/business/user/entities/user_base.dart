@@ -50,4 +50,32 @@ class User {
       roles: roles ?? this.roles,
     );
   }
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
+      phone: json['phone'] as String?,
+      image: json['image'] as String?,
+      colorIndex: json['colorIndex'] as int?,
+      roles: (json['role'] as String?) != null
+          ? {UserRole.fromString(json['role'] as String)}
+          : const {},
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'firstName': firstName,
+      'lastName': lastName,
+      'phone': phone,
+      'image': image,
+      'colorIndex': colorIndex,
+      'role': roles.isNotEmpty ? roles.first.value : null,
+    };
+  }
 }

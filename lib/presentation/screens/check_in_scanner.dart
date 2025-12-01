@@ -278,7 +278,7 @@ class _ConfirmSheetState extends State<_ConfirmSheet> {
             borderRadius: BorderRadius.circular(12),
             child: AspectRatio(
               aspectRatio: 16 / 9,
-              child: _SheetImage(src: e.image),
+              child: _SheetImage(src: e.imageUrl ?? ''),
             ),
           ),
           const SizedBox(height: 16),
@@ -303,7 +303,7 @@ class _ConfirmSheetState extends State<_ConfirmSheet> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      '${formatLongDate(e.dateTime)}  •  ${formatTime(e.dateTime)}',
+                      '${formatLongDate(e.eventDate)}  •  ${formatTime(e.eventDate)}',
                       style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                       overflow: TextOverflow.ellipsis,
                     ),

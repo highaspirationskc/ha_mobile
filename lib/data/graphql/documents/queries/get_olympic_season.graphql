@@ -1,0 +1,31 @@
+query GetOlympicSeason($input: OlympicSeasonQueryInput) {
+  olympicSeason(input: $input) {
+    id
+    name
+    startMonth
+    startDay
+    endMonth
+    endDay
+    createdAt
+    updatedAt
+    events {
+      id
+      name
+      eventDate
+      description
+      location
+      eventType {
+        id
+        name
+      }
+      registeredUsers {
+        id
+        firstName
+        lastName
+        email
+        image
+      }
+    }
+  }
+}
+

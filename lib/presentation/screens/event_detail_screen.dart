@@ -149,7 +149,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final e = widget.event;
 
     // Show all attendees in a grid
-    final List<User> allAttendees = e.attendees;
+    final List<User> allAttendees = e.registeredUsers;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -157,7 +157,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         // Full-bleed header image
         AspectRatio(
           aspectRatio: 16 / 9,
-          child: _HeaderImage(src: e.image),
+          child: _HeaderImage(src: e.imageUrl ?? ''),
         ),
 
         // Content
@@ -190,12 +190,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
               _InfoRow(
                 icon: Icons.calendar_today_outlined,
-                primary: formatLongDate(e.dateTime),
-                secondary: formatTime(e.dateTime),
+                primary: formatLongDate(e.eventDate),
+                secondary: formatTime(e.eventDate),
               ),
               const _SectionDivider(),
 
-              _InfoRow(icon: Icons.place_outlined, primary: e.location),
+              _InfoRow(icon: Icons.place_outlined, primary: e.location ?? ''),
               const _SectionDivider(),
 
               // About
@@ -206,7 +206,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(e.description, style: textTheme.bodyLarge),
+              Text(e.description ?? '', style: textTheme.bodyLarge),
 
               // ---- Attending (between About and buttons) ----
               const SizedBox(height: 24),

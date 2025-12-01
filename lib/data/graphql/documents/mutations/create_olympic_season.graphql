@@ -1,0 +1,16 @@
+mutation CreateOlympicSeason($input: CreateOlympicSeasonInput!) {
+  createOlympicSeason(input: $input) {
+    olympicSeason {
+      id
+      name
+      startMonth
+      startDay
+      endMonth
+      endDay
+      createdAt
+      updatedAt
+    }
+    errors
+  }
+}
+

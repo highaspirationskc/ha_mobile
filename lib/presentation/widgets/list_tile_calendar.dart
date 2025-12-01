@@ -26,10 +26,12 @@ class ListTileCalendar extends StatelessWidget {
         horizontal: compact ? 8 : 12,
         vertical: compact ? 4 : 8,
       ),
-      leading: compact ? const Icon(Icons.event) : _Thumb(src: event.image),
+      leading: compact
+          ? const Icon(Icons.event)
+          : _Thumb(src: event.imageUrl ?? ''),
       title: Text(event.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        '${_fmtDate(event.dateTime)} • ${_fmtTime(event.dateTime)} • ${event.location}',
+        '${_fmtDate(event.eventDate)} • ${_fmtTime(event.eventDate)} • ${event.location ?? 'TBD'}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(color: cs.onSurfaceVariant),

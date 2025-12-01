@@ -1,4 +1,5 @@
 // lib/features/mentees/mentees_list_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../business/user/entities/user.dart';
 import '../../core/session.dart';
@@ -31,21 +32,68 @@ class _MenteesListScreenState extends State<MenteesListScreen> {
     });
 
     try {
-      // Get the current mentor's ID
-      final mentorId = currentUserId;
+      final userKind = currentUserKind.value;
+      final isParent = userKind == CurrentUserKind.parent;
 
-      // Fetch mentees for this mentor
-      final mentees = await ApiService.instance.getMenteesByMentor(
-        mentorId: mentorId,
-      );
+      if (kDebugMode) {
+        print(
+          '👥 Loading ${isParent ? "children" : "mentees"} for current authenticated ${userKind.name}',
+        );
+        print('   Authenticated: ${isAuthenticated ? "Yes" : "No"}');
+      }
+
+      // Fetch mentees or children based on user role
+      final List<User> mentees;
+      if (isParent) {
+        mentees = await ApiService.instance.getChildrenByParent(
+          parentId: currentUserId,
+        );
+      } else {
+        mentees = await ApiService.instance.getMenteesByMentor(
+          mentorId: currentUserId,
+        );
+      }
+
+      if (kDebugMode) {
+        print(
+          '✅ Loaded ${mentees.length} ${isParent ? "children" : "mentees"}',
+        );
+        for (final mentee in mentees) {
+          print(
+            '   - ${mentee.firstName} ${mentee.lastName} (${mentee.email})',
+          );
+        }
+      }
 
       setState(() {
         _mentees = mentees;
         _isLoading = false;
       });
+
+      // Auto-navigate if there's only one mentee/child
+      if (mentees.length == 1 && mounted) {
+        if (kDebugMode) {
+          print(
+            'ℹ️ Only one ${isParent ? "child" : "mentee"}, auto-navigating to detail screen',
+          );
+        }
+        // Use addPostFrameCallback to ensure navigation happens after build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => MenteeScreen(mentee: mentees[0]),
+              ),
+            );
+          }
+        });
+      }
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error loading mentees: $e');
+      }
       setState(() {
-        _errorMessage = 'Failed to load mentees: ${e.toString()}';
+        _errorMessage = 'Failed to load: ${e.toString()}';
         _isLoading = false;
       });
     }
@@ -84,6 +132,7 @@ class _MenteesListScreenState extends State<MenteesListScreen> {
     }
 
     if (_mentees.isEmpty) {
+      final isParent = currentUserKind.value == CurrentUserKind.parent;
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -91,12 +140,14 @@ class _MenteesListScreenState extends State<MenteesListScreen> {
             Icon(Icons.people_outline, size: 64, color: cs.outline),
             const SizedBox(height: 16),
             Text(
-              'No mentees assigned yet',
+              isParent ? 'No children found' : 'No mentees assigned yet',
               style: t.titleLarge?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Text(
-              'Mentees will appear here once they are assigned to you',
+              isParent
+                  ? 'Your children will appear here once they are added to the system'
+                  : 'Mentees will appear here once they are assigned to you',
               style: t.bodyMedium?.copyWith(color: cs.outline),
               textAlign: TextAlign.center,
             ),

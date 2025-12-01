@@ -99,9 +99,34 @@ class AuthService {
     }
   }
 
-  /// Logout and clear auth token
-  void logout() {
-    _graphQLClient.clearAuthToken();
+  /// Logout user and clear all authentication data
+  Future<void> logout() async {
+    if (kDebugMode) {
+      print('🔓 Logging out user');
+    }
+
+    try {
+      // Optional: Call logout mutation on server if it exists
+      // This allows the server to invalidate the token server-side
+      // await _graphQLClient.client.mutate(
+      //   MutationOptions(
+      //     document: gql(logoutMutation),
+      //   ),
+      // );
+
+      // Clear auth token from client
+      _graphQLClient.clearAuthToken();
+
+      if (kDebugMode) {
+        print('✅ Logout successful');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Logout error (continuing anyway): $e');
+      }
+      // Clear token even if server logout fails
+      _graphQLClient.clearAuthToken();
+    }
   }
 
   /// Check if user is authenticated

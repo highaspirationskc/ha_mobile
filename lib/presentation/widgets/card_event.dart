@@ -39,7 +39,7 @@ class EventCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   // Bottom layer: Event image
-                  _EventImage(src: e.image),
+                  _EventImage(src: e.imageUrl ?? ''),
 
                   // Middle layer: Gradient overlay
                   Container(
@@ -97,7 +97,7 @@ class EventCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '${formatShortDate(e.dateTime)} • ${formatTime(e.dateTime)}',
+                              '${formatShortDate(e.eventDate)} • ${formatTime(e.eventDate)}',
                               style: t.bodyMedium?.copyWith(
                                 color: Colors.white.withOpacity(0.95),
                                 fontWeight: FontWeight.w500,
@@ -128,7 +128,7 @@ class EventCard extends StatelessWidget {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                e.location,
+                                e.location ?? '',
                                 style: t.bodyMedium?.copyWith(
                                   color: Colors.white.withOpacity(0.95),
                                   fontWeight: FontWeight.w500,

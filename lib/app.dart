@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ha_mobile/presentation/screens/root_shell.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/color_schemes.dart';
 import 'core/theme/theme_controller.dart';
@@ -20,8 +19,7 @@ class HAApp extends StatelessWidget {
       theme: light,
       darkTheme: dark,
       themeMode: controller.mode, // <- live mode from controller
-      home: const RootShell(),
-      // home: const LoginScreen(),
+      home: const LoginScreen(),
     );
   }
 }

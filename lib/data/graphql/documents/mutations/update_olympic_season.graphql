@@ -1,0 +1,15 @@
+mutation UpdateOlympicSeason($input: UpdateOlympicSeasonInput!) {
+  updateOlympicSeason(input: $input) {
+    olympicSeason {
+      id
+      name
+      startMonth
+      startDay
+      endMonth
+      endDay
+      updatedAt
+    }
+    errors
+  }
+}
+

@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:ha_mobile/data/mock/mock_users.dart';
 
 import '../../business/events/entities/event.dart';
+import '../../business/events/entities/event_type.dart';
+import '../../business/olympic_season/entities/olympic_season.dart';
 import '../../business/scoops/entities/scoop.dart';
 
 // NEW role-based user models
@@ -242,6 +244,149 @@ final User mockUser = User(
 );
 
 /// =================================================================================
+/// EVENT TYPES
+/// =================================================================================
+
+final EventType mockEventTypeMentorship = EventType(
+  id: 'et_mentorship',
+  name: 'Mentorship',
+  category: 'Social',
+  pointValue: 10,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 365)),
+);
+
+final EventType mockEventTypeCareer = EventType(
+  id: 'et_career',
+  name: 'Career Development',
+  category: 'Professional',
+  pointValue: 15,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 365)),
+);
+
+final EventType mockEventTypeCommunity = EventType(
+  id: 'et_community',
+  name: 'Community Service',
+  category: 'Service',
+  pointValue: 20,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 365)),
+);
+
+final EventType mockEventTypeSTEM = EventType(
+  id: 'et_stem',
+  name: 'STEM Activity',
+  category: 'Education',
+  pointValue: 15,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 365)),
+);
+
+final EventType mockEventTypeLeadership = EventType(
+  id: 'et_leadership',
+  name: 'Leadership',
+  category: 'Professional',
+  pointValue: 15,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 365)),
+);
+
+final EventType mockEventTypeRecreation = EventType(
+  id: 'et_recreation',
+  name: 'Recreation',
+  category: 'Social',
+  pointValue: 5,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 365)),
+);
+
+final List<EventType> mockEventTypes = [
+  mockEventTypeMentorship,
+  mockEventTypeCareer,
+  mockEventTypeCommunity,
+  mockEventTypeSTEM,
+  mockEventTypeLeadership,
+  mockEventTypeRecreation,
+];
+
+/// Quick lookups
+final Map<String, EventType> mockEventTypesById = {
+  for (final et in mockEventTypes) et.id: et,
+};
+
+/// =================================================================================
+/// OLYMPIC SEASONS
+/// =================================================================================
+
+final OlympicSeason mockOlympicSeasonFall = OlympicSeason(
+  id: 'os_fall',
+  name: 'Fall',
+  startMonth: 9,
+  startDay: 1,
+  endMonth: 11,
+  endDay: 30,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 30)),
+);
+
+final OlympicSeason mockOlympicSeasonWinter = OlympicSeason(
+  id: 'os_winter',
+  name: 'Winter',
+  startMonth: 12,
+  startDay: 1,
+  endMonth: 2,
+  endDay: 28,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 30)),
+);
+
+final OlympicSeason mockOlympicSeasonSpring = OlympicSeason(
+  id: 'os_spring',
+  name: 'Spring',
+  startMonth: 3,
+  startDay: 1,
+  endMonth: 5,
+  endDay: 31,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 30)),
+);
+
+final OlympicSeason mockOlympicSeasonSummer = OlympicSeason(
+  id: 'os_summer',
+  name: 'Summer',
+  startMonth: 6,
+  startDay: 1,
+  endMonth: 8,
+  endDay: 31,
+  createdAt: DateTime.now().subtract(const Duration(days: 365)),
+  updatedAt: DateTime.now().subtract(const Duration(days: 30)),
+);
+
+final List<OlympicSeason> mockOlympicSeasons = [
+  mockOlympicSeasonFall,
+  mockOlympicSeasonWinter,
+  mockOlympicSeasonSpring,
+  mockOlympicSeasonSummer,
+];
+
+/// Quick lookups
+final Map<String, OlympicSeason> mockOlympicSeasonsById = {
+  for (final os in mockOlympicSeasons) os.id: os,
+};
+
+/// Helper to get current season based on today's date
+OlympicSeason getCurrentSeason() {
+  final now = DateTime.now();
+  final month = now.month;
+
+  if (month >= 9 && month <= 11) return mockOlympicSeasonFall;
+  if (month == 12 || month <= 2) return mockOlympicSeasonWinter;
+  if (month >= 3 && month <= 5) return mockOlympicSeasonSpring;
+  return mockOlympicSeasonSummer;
+}
+
+/// =================================================================================
 /// EVENTS
 /// =================================================================================
 
@@ -265,8 +410,8 @@ final List<String> _eventImgs = [
 
 String _img(int i) => _eventImgs[i % _eventImgs.length];
 
-List<User> _pickAttendees() {
-  final count = _rng.nextInt(51); // 0..50
+List<User> _pickUsers(int maxCount) {
+  final count = _rng.nextInt(maxCount + 1);
   if (count == 0) return const [];
   final pool = List<User>.from(mockUsers)..shuffle(_rng);
   return pool.take(count).toList();
@@ -282,17 +427,22 @@ DateTime _nextSaturday() {
 }
 
 final List<Event> mockEvents = [
-  // First event is always a Saturday event
   Event(
     id: 'evt_saturday',
     name: 'Chess Tournament',
     description:
         'Join us for a friendly chess tournament! All skill levels welcome. Compete for prizes and connect with fellow chess enthusiasts.',
-    dateTime: _nextSaturday(),
+    eventDate: _nextSaturday(),
     location: 'HA Headquarters',
-    image:
+    imageUrl:
         'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?q=80&w=1200&auto=format&fit=crop',
-    attendees: _pickAttendees(),
+    eventType: mockEventTypeRecreation,
+    olympicSeasonId: getCurrentSeason().id,
+    registeredUsers: _pickUsers(50),
+    arrivedUsers: _pickUsers(35),
+    createdAt: _now.subtract(const Duration(days: 14)),
+    updatedAt: _now.subtract(const Duration(days: 2)),
+    createdBy: mockMentor,
   ),
   // Other events
   ...List<Event>.generate(7, (i) {
@@ -314,19 +464,38 @@ final List<Event> mockEvents = [
       'Auditorium A',
       'Makerspace',
     ];
+    final eventTypes = [
+      mockEventTypeMentorship,
+      mockEventTypeCareer,
+      mockEventTypeCommunity,
+      mockEventTypeSTEM,
+      mockEventTypeCareer,
+      mockEventTypeLeadership,
+      mockEventTypeSTEM,
+    ];
 
+    final eventDate = _onDay((i + 1) * 2 + 1, hour: 17 + (i % 3));
     return Event(
       id: 'evt_${i + 1}',
       name: titles[i],
       description:
           'Join us for ${titles[i].toLowerCase()} focused on growth, networking, and hands-on learning.',
-      dateTime: _onDay((i + 1) * 2 + 1, hour: 17 + (i % 3)), // 5–7 PM ranges
+      eventDate: eventDate,
       location: locations[i],
-      image: _img(i),
-      attendees: _pickAttendees(),
+      imageUrl: _img(i),
+      eventType: eventTypes[i],
+      olympicSeasonId: getCurrentSeason().id,
+      registeredUsers: _pickUsers(40),
+      arrivedUsers: _pickUsers(30),
+      createdAt: eventDate.subtract(const Duration(days: 21)),
+      updatedAt: eventDate.subtract(const Duration(days: 7)),
+      createdBy: mockMentor,
     );
   }),
 ];
+
+/// Quick lookups
+final Map<String, Event> mockEventsById = {for (final e in mockEvents) e.id: e};
 
 /// =================================================================================
 /// SCOOPS

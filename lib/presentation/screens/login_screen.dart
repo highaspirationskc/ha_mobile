@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ha_mobile/presentation/widgets/wave_panel.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../core/session.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/auth_storage.dart';
+import '../../data/services/olympic_season_service.dart';
 import '../widgets/button_long.dart';
 import '../screens/root_shell.dart';
 
@@ -20,6 +23,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-populate credentials in debug/development mode
+    if (kDebugMode) {
+      _emailController.text = dotenv.env['DEV_EMAIL'] ?? '';
+      _passwordController.text = dotenv.env['DEV_PASSWORD'] ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -52,6 +65,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Set authenticated user in session
       setAuthenticatedUser(authResponse.user);
+
+      // Fetch Olympic Season data in the background
+      OlympicSeasonService.instance.fetchCurrentSeason().catchError((e) {
+        if (kDebugMode) {
+          print('⚠️ Failed to fetch Olympic Season: $e');
+        }
+        // Don't block login if this fails - it will use mock data
+      });
 
       if (mounted) {
         // Navigate to home screen (RootShell)

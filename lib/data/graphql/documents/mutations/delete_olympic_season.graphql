@@ -1,0 +1,7 @@
+mutation DeleteOlympicSeason($id: ID!) {
+  deleteOlympicSeason(id: $id) {
+    success
+    errors
+  }
+}
+

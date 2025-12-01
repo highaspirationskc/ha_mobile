@@ -48,3 +48,6 @@ app.*.map.json
 /android/app/key.properties
 /android/app/*.jks
 /android/app/*.keystore
+
+# Environment variables (KEEP PRIVATE!)
+.env

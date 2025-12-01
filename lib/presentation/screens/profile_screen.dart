@@ -7,9 +7,9 @@ import '../../core/routes.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_refs.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/auth_service.dart';
 import '../widgets/avatar.dart';
-import '../widgets/community_service_tile.dart';
-import '../../business/user/entities/role_mentee.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,7 +18,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  /// Local overrides so you can test editing without touching global mock data.
+  User? _currentUser;
+  bool _isLoading = true;
   String? _imageOverride;
   int? _colorIndexOverride;
   int _totalCommunityServiceHours = 0;
@@ -27,12 +28,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _totalPulses = 0;
   int _totalPoints = 0;
   UserRef? _mentor;
-  TeamSummary? _teamSummary;
 
   @override
   void initState() {
     super.initState();
-    _loadCommunityServiceHours();
+    _loadUserData();
     // Listen to API service changes to update hours when new entries are added
     ApiService.instance.changes.addListener(_onApiChanges);
   }
@@ -44,11 +44,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _onApiChanges() {
-    _loadCommunityServiceHours();
+    _loadUserData();
   }
 
-  Future<void> _loadCommunityServiceHours() async {
+  Future<void> _loadUserData() async {
+    setState(() => _isLoading = true);
+
     try {
+      // Fetch current user data from API
+      final userData = await ApiService.instance.getCurrentUser();
+
       final hours = await ApiService.instance.getTotalCommunityServiceHours(
         userId: currentUserId,
       );
@@ -62,8 +67,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final menteeData = await ApiService.instance.getMenteeData(
         userId: currentUserId,
       );
+
       if (mounted) {
         setState(() {
+          _currentUser = userData;
           _totalCommunityServiceHours = hours;
           _totalCommunityServiceEvents = services.length;
           _totalAttendance = attendance;
@@ -72,11 +79,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               attendance +
               services.length; // Points = attendance + community service events
           _mentor = menteeData?.mentor;
-          _teamSummary = menteeData?.teamSummary;
+          _isLoading = false;
         });
       }
     } catch (e) {
-      // Handle error silently for now
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -85,228 +94,244 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
 
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Fallback to mock user if no authenticated user (shouldn't happen but safe)
+    final u = _currentUser ?? currentUser;
+
     return ValueListenableBuilder<CurrentUserKind>(
       valueListenable: currentUserKind,
       builder: (context, kind, _) {
-        final User u = currentUser; // resolved from session.dart
-        return ListView(
-          padding: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: 100, // Space for floating nav bar
-          ),
-          children: [
-            // Role switcher
-            Row(
-              children: [
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 32),
+
+              // Large Avatar
+              _buildAvatar(u, cs, t),
+              const SizedBox(height: 16),
+
+              // Name
+              Text(
+                u.displayName.isNotEmpty ? u.displayName : u.email,
+                style: t.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+
+              // Email
+              Text(
+                u.email,
+                style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
+              ),
+
+              // Points (only for mentees)
+              if (currentUserKind.value == CurrentUserKind.mentee) ...[
+                const SizedBox(height: 8),
                 Text(
-                  'Profile',
-                  style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const Spacer(),
-                SegmentedButton<CurrentUserKind>(
-                  segments: const [
-                    ButtonSegment(
-                      value: CurrentUserKind.mentee,
-                      label: Text('Mentee'),
-                      icon: Icon(Icons.school_outlined),
-                    ),
-                    ButtonSegment(
-                      value: CurrentUserKind.mentor,
-                      label: Text('Mentor'),
-                      icon: Icon(Icons.emoji_people_outlined),
-                    ),
-                  ],
-                  selected: {kind},
-                  onSelectionChanged: (s) {
-                    switchCurrentUser(s.first);
-                    // clear local overrides when switching mock users
-                    setState(() {
-                      _imageOverride = null;
-                      _colorIndexOverride = null;
-                    });
-                    _loadCommunityServiceHours(); // Reload hours for new user
-                  },
+                  '$_totalPoints pts',
+                  style: t.titleLarge?.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-            // Centered Avatar Section
-            Center(
-              child: Column(
-                children: [
-                  Avatar(
-                    firstName: u.firstName,
-                    lastName: u.lastName,
-                    image: _imageOverride ?? u.image,
-                    colorIndex: _colorIndexOverride ?? u.colorIndex,
-                    editable: true,
-                    onImageChanged: (path) =>
-                        setState(() => _imageOverride = path),
-                    onColorChanged: (i) =>
-                        setState(() => _colorIndexOverride = i),
-                    size: 96,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Name
-                  Text(
-                    u.displayName.isNotEmpty ? u.displayName : u.email,
-                    style: t.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: cs.onSurface,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Email
-                  Text(
-                    u.email,
-                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Points chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: cs.primary.withOpacity(0.20)),
-                    ),
-                    child: Text(
-                      '$_totalPoints points',
-                      style: t.labelMedium?.copyWith(
-                        color: cs.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
+              // Mentor Section (only show for mentees with assigned mentors)
+              if (currentUserKind.value == CurrentUserKind.mentee &&
+                  _mentor != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Mentor',
+                        style: t.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    _buildMentorTile(context, cs, t),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+
+              // Stats Section (only show for mentees)
+              if (currentUserKind.value == CurrentUserKind.mentee)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Stats',
+                        style: t.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    _buildAttendanceTile(context, cs, t),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 72,
+                      color: cs.outlineVariant.withOpacity(0.3),
+                    ),
+                    _buildPulseTile(context, cs, t),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 72,
+                      color: cs.outlineVariant.withOpacity(0.3),
+                    ),
+                    _buildCommunityServiceTile(context, cs, t),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                  ],
+                ),
+
+              const SizedBox(height: 32),
+
+              // Log Out Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleLogOut(context),
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Log Out'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: cs.error,
+                    side: BorderSide(color: cs.error),
+                    minimumSize: const Size(double.infinity, 48),
                   ),
-                ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 32),
-
-            // Mentor Tile (only show for mentees with assigned mentors)
-            if (currentUserKind.value == CurrentUserKind.mentee &&
-                _mentor != null)
-              _buildMentorTile(context, cs, t),
-
-            // Attendance Tile
-            _buildAttendanceTile(context, cs, t),
-
-            // Pulse Tile
-            _buildPulseTile(context, cs, t),
-
-            // Community Service Tile
-            CommunityServiceTile(
-              totalHours: _totalCommunityServiceHours,
-              totalEvents: _totalCommunityServiceEvents,
-              onTap: () {
-                Navigator.of(context).pushNamed(AppRoutes.communityService);
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Future sections / role-specific cards can go here
-            Text(
-              'Other profile settings coming soon…',
-              style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ],
+              const SizedBox(height: 100), // Space for floating nav bar
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildMentorTile(BuildContext context, ColorScheme cs, TextTheme t) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Future<void> _handleLogOut(BuildContext context) async {
+    // Show confirmation dialog
+    final shouldLogOut = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Log Out'),
           ),
         ],
       ),
-      child: InkWell(
-        onTap: () => _callMentor(context),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Mentor Avatar
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (_mentor!.image != null && _mentor!.image!.isNotEmpty)
-                        Image(
-                          image: _mentor!.image!.startsWith('http')
-                              ? NetworkImage(_mentor!.image!) as ImageProvider
-                              : AssetImage(_mentor!.image!),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _buildMentorFallbackAvatar(context, cs),
-                        )
-                      else
-                        _buildMentorFallbackAvatar(context, cs),
-                    ],
+    );
+
+    if (shouldLogOut == true && context.mounted) {
+      // Perform logout via AuthService
+      await AuthService.instance.logout();
+      clearAuthenticatedUser();
+
+      // Navigate to login screen and clear navigation stack
+      // Use Navigator.of(context, rootNavigator: true) to ensure we're using the root navigator
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
+  Widget _buildAvatar(User u, ColorScheme cs, TextTheme t) {
+    return Avatar(
+      firstName: u.firstName,
+      lastName: u.lastName,
+      image: _imageOverride ?? u.image,
+      colorIndex: _colorIndexOverride ?? u.colorIndex,
+      editable: true,
+      onImageChanged: (path) => setState(() => _imageOverride = path),
+      onColorChanged: (i) => setState(() => _colorIndexOverride = i),
+      size: 64,
+    );
+  }
+
+  Widget _buildMentorTile(BuildContext context, ColorScheme cs, TextTheme t) {
+    return InkWell(
+      onTap: () => _callMentor(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Mentor Avatar
+            Avatar(
+              firstName: _mentor!.firstName,
+              lastName: _mentor!.lastName,
+              image: _mentor!.image,
+              colorIndex: _mentor!.colorIndex,
+              size: 48,
+              editable: false,
+            ),
+            const SizedBox(width: 16),
+
+            // Mentor Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _mentor!.displayName,
+                    style: t.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tap to call',
+                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
               ),
+            ),
 
-              const SizedBox(width: 16),
-
-              // Mentor Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mentor',
-                      style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _mentor!.displayName,
-                      style: t.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Phone Number (placeholder for now)
-              Text(
-                '(620) 555-1234',
-                style: t.bodyMedium?.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+            // Phone Icon
+            Icon(Icons.phone, color: cs.primary, size: 24),
+          ],
         ),
       ),
     );
@@ -351,168 +376,154 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ColorScheme cs,
     TextTheme t,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return InkWell(
+      onTap: () {
+        // TODO: Navigate to attendance screen when implemented
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Attendance details coming soon!'),
+            duration: Duration(seconds: 2),
           ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          // TODO: Navigate to attendance screen when implemented
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Attendance details coming soon!'),
-              duration: Duration(seconds: 2),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Attendance Icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(Icons.event_available, color: cs.primary, size: 24),
             ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Attendance Icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: cs.primary,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Icon(
-                  Icons.event_available,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Attendance Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$_totalAttendance',
-                      style: t.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: cs.onSurface,
-                      ),
+            const SizedBox(width: 16),
+            // Attendance Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Attendance',
+                    style: t.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Attendance',
-                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$_totalAttendance events',
+                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
               ),
-              // View Button
-              Text(
-                'View',
-                style: t.bodyMedium?.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+            ),
+            // Arrow Icon
+            Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildPulseTile(BuildContext context, ColorScheme cs, TextTheme t) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).pushNamed(AppRoutes.pulses);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Pulse Icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: cs.primary,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Icon(Icons.favorite, color: Colors.white, size: 24),
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).pushNamed(AppRoutes.pulses);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Pulse Icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
               ),
-              const SizedBox(width: 16),
-              // Pulse Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$_totalPulses',
-                      style: t.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: cs.onSurface,
-                      ),
+              child: Icon(Icons.favorite, color: cs.primary, size: 24),
+            ),
+            const SizedBox(width: 16),
+            // Pulse Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pulses',
+                    style: t.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Pulses',
-                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$_totalPulses entries',
+                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
               ),
-              // View Button
-              Text(
-                'View',
-                style: t.bodyMedium?.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+            ),
+            // Arrow Icon
+            Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMentorFallbackAvatar(BuildContext context, ColorScheme cs) {
-    final f = (_mentor!.firstName ?? '').trim();
-    final l = (_mentor!.lastName ?? '').trim();
-    final initials =
-        (f.isNotEmpty ? f.characters.first : '') +
-        (l.isNotEmpty ? l.characters.first : '');
-
-    return Container(
-      color: cs.surfaceVariant,
-      alignment: Alignment.center,
-      child: Text(
-        (initials.isEmpty ? 'M' : initials).toUpperCase(),
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: cs.onSurfaceVariant,
+  Widget _buildCommunityServiceTile(
+    BuildContext context,
+    ColorScheme cs,
+    TextTheme t,
+  ) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).pushNamed(AppRoutes.communityService);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Community Service Icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(Icons.groups, color: cs.primary, size: 24),
+            ),
+            const SizedBox(width: 16),
+            // Community Service Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Community Service',
+                    style: t.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$_totalCommunityServiceHours hrs · $_totalCommunityServiceEvents events',
+                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            // Arrow Icon
+            Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
+          ],
         ),
       ),
     );

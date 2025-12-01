@@ -1,0 +1,13 @@
+query GetAllOlympicSeasons {
+  olympicSeasons {
+    id
+    name
+    startMonth
+    startDay
+    endMonth
+    endDay
+    createdAt
+    updatedAt
+  }
+}
+

@@ -146,7 +146,7 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          formatShortDate(e.dateTime),
+                          formatShortDate(e.eventDate),
                           style: t.bodyMedium?.copyWith(
                             color: Colors.white.withOpacity(0.9),
                           ),
@@ -166,7 +166,7 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            e.location,
+                            e.location ?? '',
                             style: t.bodyMedium?.copyWith(
                               color: Colors.white.withOpacity(0.9),
                             ),
@@ -178,9 +178,9 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                     ),
 
                     // Attending avatars
-                    if (e.attendees.isNotEmpty) ...[
+                    if (e.registeredUsers.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      _AttendingAvatars(attendees: e.attendees),
+                      _AttendingAvatars(attendees: e.registeredUsers),
                     ],
 
                     const SizedBox(height: 16),
@@ -240,7 +240,7 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                     child: SizedBox(
                       width: 120,
                       height: 140,
-                      child: _EventImage(src: e.image),
+                      child: _EventImage(src: e.imageUrl ?? ''),
                     ),
                   ),
                   // Registered badge overlay
@@ -370,7 +370,7 @@ class _AttendingAvatars extends StatelessWidget {
             Positioned(
               left: i * overlapOffset,
               child: AvatarMini(
-                imageUrl: displayedAttendees[i].image,
+                imageUrl: displayedAttendees[i].image ?? '',
                 initials: _buildInitials(displayedAttendees[i]),
                 color: _getColor(displayedAttendees[i].colorIndex),
                 strokeColor: kHAPrimary,

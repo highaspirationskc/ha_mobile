@@ -8,6 +8,7 @@ const String loginMutation = r'''
       user {
         id
         email
+        role
       }
     }
   }

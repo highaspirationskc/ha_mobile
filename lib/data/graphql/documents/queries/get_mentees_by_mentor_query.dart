@@ -8,9 +8,8 @@ const String getMenteesByMentorQuery = r'''
       email
       firstName
       lastName
-      phone
-      image
-      colorIndex
+      avatarUrl
+      role
     }
   }
 ''';

@@ -6,7 +6,7 @@ import '../widgets/list_tile_calendar.dart';
 import '../widgets/tabs.dart';
 import '../../core/routes.dart';
 import '../../core/theme/brand_colors.dart';
-import '../../data/mock/mock_data.dart';
+import '../../data/services/olympic_season_service.dart';
 import '../../core/utils/date_formatters.dart'; // <- shared utils
 
 class CalendarScreen extends StatefulWidget {
@@ -28,12 +28,22 @@ class _CalendarScreenState extends State<CalendarScreen>
     _tabController = TabController(length: 2, vsync: this);
     _focusedDay = truncateToDay(DateTime.now());
     _selectedDay = truncateToDay(DateTime.now());
-    _eventsByDay = _groupByDay(mockEvents);
+    _eventsByDay = _groupByDay(OlympicSeasonService.instance.events);
+
+    // Listen to changes in Olympic Season data
+    OlympicSeasonService.instance.addListener(_onSeasonDataChanged);
+  }
+
+  void _onSeasonDataChanged() {
+    setState(() {
+      _eventsByDay = _groupByDay(OlympicSeasonService.instance.events);
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    OlympicSeasonService.instance.removeListener(_onSeasonDataChanged);
     super.dispose();
   }
 
@@ -60,8 +70,8 @@ class _CalendarScreenState extends State<CalendarScreen>
 
   // ----- LIST VIEW -----
   Widget _buildListView(BuildContext context) {
-    final items = List<Event>.from(mockEvents)
-      ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    final items = List<Event>.from(OlympicSeasonService.instance.events)
+      ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: items.length,
@@ -161,7 +171,7 @@ class _CalendarScreenState extends State<CalendarScreen>
   Map<DateTime, List<Event>> _groupByDay(List<Event> list) {
     final map = <DateTime, List<Event>>{};
     for (final e in list) {
-      final d = truncateToDay(e.dateTime);
+      final d = truncateToDay(e.eventDate);
       map.putIfAbsent(d, () => []).add(e);
     }
     return map;

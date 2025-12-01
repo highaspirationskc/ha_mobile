@@ -7,6 +7,8 @@ import '../../core/session.dart'; // currentUserKind, CurrentUserKind
 import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
 import '../widgets/avatar.dart';
+import '../../data/services/api_service.dart';
+import '../../business/user/entities/user.dart';
 
 // Screens (body-only)
 import '../../features/home/home_screen.dart';
@@ -53,6 +55,9 @@ class _RootShellState extends State<RootShell> {
   String _teamsRoute = AppRoutes.teamRoot;
   String _profileRoute = AppRoutes.profileRoot;
 
+  // Current user data
+  User? _currentUser;
+
   // deferred setState to avoid setState-during-build
   bool _pending = false;
   void _deferRebuild() {
@@ -63,6 +68,28 @@ class _RootShellState extends State<RootShell> {
       _pending = false;
       setState(() {});
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await ApiService.instance.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+      }
+    } catch (e) {
+      // Fall back to mock user if API fails
+      if (mounted) {
+        setState(() {});
+      }
+    }
   }
 
   late final _homeObs = _TabObserver((r, _) {
@@ -150,7 +177,7 @@ class _RootShellState extends State<RootShell> {
       AppRoutes.checkInScanner => '', // hide app bar; shell will handle
       AppRoutes.notificationsRoot => 'Notifications',
       AppRoutes.notificationMessage => 'Message',
-      _ => 'Hello ${currentUser.firstName ?? 'there'}',
+      _ => 'Hello ${(_currentUser ?? currentUser).firstName ?? 'there'}',
     },
   );
 
@@ -233,7 +260,7 @@ class _RootShellState extends State<RootShell> {
   );
 
   _Tab _profileTab() {
-    final user = currentUser;
+    final user = _currentUser ?? currentUser;
     return _Tab(
       label: 'Profile',
       icon: Avatar(
@@ -329,12 +356,23 @@ class _RootShellState extends State<RootShell> {
   }
 
   String _titleFor(List<_Tab> tabs, int stackIndex) {
+    // Ensure stackIndex is within bounds
+    if (stackIndex >= tabs.length) {
+      return 'High Aspirations';
+    }
+
     final names = [
       _homeRoute,
       if (tabs.any((t) => t.key == _menteesKey)) _menteesRoute,
       _teamsRoute,
       _profileRoute,
     ];
+
+    // Ensure the names list index is valid
+    if (stackIndex >= names.length) {
+      return 'High Aspirations';
+    }
+
     final routeName = names[stackIndex];
     final tab = tabs[stackIndex];
     return tab.titleForRoute(routeName);
@@ -354,12 +392,13 @@ class _RootShellState extends State<RootShell> {
     return ValueListenableBuilder<CurrentUserKind>(
       valueListenable: currentUserKind,
       builder: (context, kind, _) {
-        final isMentee = kind == CurrentUserKind.mentee;
+        final showMenteesTab =
+            kind == CurrentUserKind.mentor || kind == CurrentUserKind.parent;
 
         // Build stack tabs (notifications removed from tabs, now in app bar)
         final tabs = <_Tab>[
           _homeTab(),
-          if (!isMentee) _menteesTab(), // mentor only
+          if (showMenteesTab) _menteesTab(), // mentor and parent
           _teamsTab(),
           _profileTab(),
         ];
@@ -370,7 +409,7 @@ class _RootShellState extends State<RootShell> {
         final title = _titleFor(tabs, _stackIndex);
         final currentRoute = [
           _homeRoute,
-          if (!isMentee) _menteesRoute,
+          if (showMenteesTab) _menteesRoute,
           _teamsRoute,
           _profileRoute,
         ][_stackIndex];
@@ -381,16 +420,16 @@ class _RootShellState extends State<RootShell> {
         final unreadCount = mockMessages.where((msg) => !msg.read).length;
 
         // Get current user for avatar
-        final user = currentUser;
+        final user = _currentUser ?? currentUser;
 
         // Build NavigationBar destinations (notifications removed, add removed)
         final navItems = <(Widget, Widget, String)>[
           (const Icon(Icons.home_outlined), const Icon(Icons.home), 'Home'),
-          if (!isMentee)
+          if (showMenteesTab)
             (
               const Icon(Icons.group_outlined),
               const Icon(Icons.group),
-              'Mentees',
+              kind == CurrentUserKind.parent ? 'Children' : 'Mentees',
             ),
           (
             const Icon(Icons.emoji_events_outlined),
@@ -431,7 +470,7 @@ class _RootShellState extends State<RootShell> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Hello ${currentUser.firstName ?? 'there'}',
+                                'Hello ${(_currentUser ?? currentUser).firstName ?? 'there'}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 18,
