@@ -6,6 +6,7 @@ import '../../business/community_service/entities/community_service.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_role.dart';
+import '../../business/user/entities/family_member.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
@@ -217,71 +218,28 @@ class ApiService {
   /// Gets all mentees assigned to the current authenticated mentor
   Future<List<User>> getMenteesByMentor({required String mentorId}) async {
     if (kDebugMode) {
-      print('🔍 API: Fetching mentees for current user (mentor)');
+      print('🔍 API: Fetching mentees for mentor: $mentorId');
     }
 
     try {
-      final result = await _graphQLClient.client.query(
-        QueryOptions(
-          document: gql(getCurrentUserQuery),
-          fetchPolicy: FetchPolicy.networkOnly,
-        ),
-      );
+      // Get all family members
+      final allFamilyMembers = await getFamilyMembers();
 
-      if (kDebugMode) {
-        print('📦 API: Current user query response:');
-        print('   Has exception: ${result.hasException}');
-        print('   Has data: ${result.data != null}');
-        if (result.hasException) {
-          print('   Exception: ${result.exception}');
-          print('   GraphQL errors: ${result.exception?.graphqlErrors}');
-          print('   Link exception: ${result.exception?.linkException}');
-        }
-        if (result.data != null) {
-          print('   Data: ${result.data}');
-        }
-      }
-
-      if (result.hasException) {
-        // If there's a network/GraphQL error, return empty list
-        if (kDebugMode) {
-          print('⚠️ API: Error fetching current user');
-        }
-        return [];
-      }
-
-      final userData = result.data?['currentUser'] as Map<String, dynamic>?;
-      if (userData == null) {
-        if (kDebugMode) {
-          print('⚠️ API: No current user data in response');
-        }
-        return [];
-      }
-
-      final menteesList = userData['mentees'] as List<dynamic>?;
-      if (menteesList == null || menteesList.isEmpty) {
-        if (kDebugMode) {
-          print('✅ API: Current user has no mentees assigned');
-        }
-        return [];
-      }
-
-      // Parse the mentees from GraphQL response
-      final mentees = menteesList.map((json) {
-        return User(
-          id: json['id'].toString(),
-          email: json['email'] as String,
-          firstName: json['firstName'] as String?,
-          lastName: json['lastName'] as String?,
-          image: json['avatarUrl'] as String?,
-          roles: json['role'] != null
-              ? {UserRole.fromString(json['role'] as String)}
-              : {},
-        );
+      // Filter to find relationships where:
+      // - user is the mentor (mentorId)
+      // - relationshipType is "mentor" or similar
+      // - relatedUser is the mentee
+      final menteeFamilyMembers = allFamilyMembers.where((fm) {
+        return fm.user.id == mentorId &&
+            (fm.relationshipType.toLowerCase() == 'mentor' ||
+                fm.relationshipType.toLowerCase() == 'mentee');
       }).toList();
 
+      // Extract the mentees (relatedUsers)
+      final mentees = menteeFamilyMembers.map((fm) => fm.relatedUser).toList();
+
       if (kDebugMode) {
-        print('✅ API: Current user has ${mentees.length} mentees');
+        print('✅ API: Found ${mentees.length} mentees for mentor $mentorId');
         for (final mentee in mentees) {
           print(
             '   - ${mentee.firstName} ${mentee.lastName} (ID: ${mentee.id})',
@@ -294,7 +252,6 @@ class ApiService {
       if (kDebugMode) {
         print('❌ API: Exception fetching mentees: $e');
       }
-      // On any error, return empty list
       return [];
     }
   }
@@ -302,82 +259,72 @@ class ApiService {
   /// Gets all children assigned to the current authenticated parent
   Future<List<User>> getChildrenByParent({required String parentId}) async {
     if (kDebugMode) {
-      print('🔍 API: Fetching children for current user (parent)');
+      print('🔍 API: Fetching children for parent: $parentId');
     }
 
     try {
-      final result = await _graphQLClient.client.query(
-        QueryOptions(
-          document: gql(getCurrentUserQuery),
-          fetchPolicy: FetchPolicy.networkOnly,
-        ),
-      );
+      // Get all family members
+      final allFamilyMembers = await getFamilyMembers();
 
       if (kDebugMode) {
-        print('📦 API: Current user query response:');
-        print('   Has exception: ${result.hasException}');
-        print('   Has data: ${result.data != null}');
-        if (result.hasException) {
-          print('   Exception: ${result.exception}');
-          print('   GraphQL errors: ${result.exception?.graphqlErrors}');
-          print('   Link exception: ${result.exception?.linkException}');
-        }
-        if (result.data != null) {
-          print('   Data: ${result.data}');
-        }
-      }
-
-      if (result.hasException) {
-        // If there's a network/GraphQL error, return empty list
-        if (kDebugMode) {
-          print('⚠️ API: Error fetching current user');
-        }
-        return [];
-      }
-
-      final userData = result.data?['currentUser'] as Map<String, dynamic>?;
-      if (userData == null) {
-        if (kDebugMode) {
-          print('⚠️ API: No current user data in response');
-        }
-        return [];
-      }
-
-      final childrenList = userData['children'] as List<dynamic>?;
-      if (childrenList == null || childrenList.isEmpty) {
-        if (kDebugMode) {
-          print('✅ API: Current user has no children assigned');
-        }
-        return [];
-      }
-
-      // Parse the children from GraphQL response
-      final children = childrenList.map((json) {
-        return User(
-          id: json['id'].toString(),
-          email: json['email'] as String,
-          firstName: json['firstName'] as String?,
-          lastName: json['lastName'] as String?,
-          image: json['avatarUrl'] as String?,
-          roles: json['role'] != null
-              ? {UserRole.fromString(json['role'] as String)}
-              : {},
+        print(
+          '📦 API: Retrieved ${allFamilyMembers.length} total family members',
         );
+        for (final fm in allFamilyMembers) {
+          print(
+            '   - ${fm.user.displayName} (ID: ${fm.user.id}) [${fm.relationshipType}] -> ${fm.relatedUser.displayName} (ID: ${fm.relatedUser.id})',
+          );
+        }
+      }
+
+      // Filter to find relationships where:
+      // - user is the parent (parentId)
+      // - relationshipType is "parent" or "child" related
+      // - relatedUser is the child
+      final childFamilyMembers = allFamilyMembers.where((fm) {
+        final isParentRelationship =
+            fm.user.id == parentId &&
+            (fm.relationshipType.toLowerCase().contains('parent') ||
+                fm.relationshipType.toLowerCase().contains('child'));
+
+        // Also check the reverse: if the relatedUser is the parent and user is the child
+        final isReverseRelationship =
+            fm.relatedUser.id == parentId &&
+            (fm.relationshipType.toLowerCase().contains('parent') ||
+                fm.relationshipType.toLowerCase().contains('child'));
+
+        return isParentRelationship || isReverseRelationship;
       }).toList();
 
+      // Extract the children
+      // If user is parent, child is relatedUser
+      // If relatedUser is parent, child is user
+      final children = childFamilyMembers.map((fm) {
+        return fm.user.id == parentId ? fm.relatedUser : fm.user;
+      }).toList();
+
+      // Remove duplicates
+      final uniqueChildren = <String, User>{};
+      for (final child in children) {
+        uniqueChildren[child.id] = child;
+      }
+
+      final childrenList = uniqueChildren.values.toList();
+
       if (kDebugMode) {
-        print('✅ API: Current user has ${children.length} children');
-        for (final child in children) {
+        print(
+          '✅ API: Found ${childrenList.length} children for parent $parentId',
+        );
+        for (final child in childrenList) {
           print('   - ${child.firstName} ${child.lastName} (ID: ${child.id})');
         }
       }
 
-      return children;
+      return childrenList;
     } catch (e) {
       if (kDebugMode) {
         print('❌ API: Exception fetching children: $e');
       }
-      // On any error, return empty list
       return [];
     }
   }
@@ -452,6 +399,217 @@ class ApiService {
 
     // Return the mentee with the highest points (should be first in the list)
     return leaderboard.topMentees.first;
+  }
+
+  /// Gets all family member relationships
+  Future<List<FamilyMember>> getFamilyMembers() async {
+    if (kDebugMode) {
+      print('🔍 API: Fetching all family members');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getFamilyMembersQuery),
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (kDebugMode) {
+        print('📦 API: Family members query response:');
+        print('   Has exception: ${result.hasException}');
+        print('   Has data: ${result.data != null}');
+        if (result.hasException) {
+          print('   Exception: ${result.exception}');
+        }
+        if (result.data != null) {
+          print('   Data: ${result.data}');
+        }
+      }
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('⚠️ API: Error fetching family members');
+        }
+        return [];
+      }
+
+      final familyMembersList = result.data?['familyMembers'] as List<dynamic>?;
+      if (familyMembersList == null || familyMembersList.isEmpty) {
+        if (kDebugMode) {
+          print('✅ API: No family members found');
+        }
+        return [];
+      }
+
+      // Parse the family members from GraphQL response
+      final familyMembers = familyMembersList.map((json) {
+        return FamilyMember.fromJson(json as Map<String, dynamic>);
+      }).toList();
+
+      if (kDebugMode) {
+        print('✅ API: Fetched ${familyMembers.length} family members');
+      }
+
+      return familyMembers;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching family members: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Gets a specific family member by ID
+  Future<FamilyMember?> getFamilyMember({required String id}) async {
+    if (kDebugMode) {
+      print('🔍 API: Fetching family member with ID: $id');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getFamilyMemberQuery),
+          variables: {'id': id},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (kDebugMode) {
+        print('📦 API: Family member query response:');
+        print('   Has exception: ${result.hasException}');
+        print('   Has data: ${result.data != null}');
+        if (result.hasException) {
+          print('   Exception: ${result.exception}');
+        }
+        if (result.data != null) {
+          print('   Data: ${result.data}');
+        }
+      }
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('⚠️ API: Error fetching family member');
+        }
+        return null;
+      }
+
+      final familyMemberData =
+          result.data?['familyMember'] as Map<String, dynamic>?;
+      if (familyMemberData == null) {
+        if (kDebugMode) {
+          print('✅ API: Family member not found');
+        }
+        return null;
+      }
+
+      final familyMember = FamilyMember.fromJson(familyMemberData);
+
+      if (kDebugMode) {
+        print('✅ API: Fetched family member: ${familyMember.id}');
+      }
+
+      return familyMember;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching family member: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Gets family members for a specific user (as either user or relatedUser)
+  Future<List<FamilyMember>> getFamilyMembersForUser({
+    required String userId,
+  }) async {
+    if (kDebugMode) {
+      print('🔍 API: Fetching family members for user: $userId');
+    }
+
+    try {
+      // First, get all family members
+      final allFamilyMembers = await getFamilyMembers();
+
+      // Filter to only those where the user is involved
+      final userFamilyMembers = allFamilyMembers.where((fm) {
+        return fm.user.id == userId || fm.relatedUser.id == userId;
+      }).toList();
+
+      if (kDebugMode) {
+        print(
+          '✅ API: Found ${userFamilyMembers.length} family members for user $userId',
+        );
+      }
+
+      return userFamilyMembers;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching family members for user: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Gets all family members related to the current authenticated parent's children
+  /// This returns OTHER family members (siblings, other parents, etc.) related to the children
+  Future<List<FamilyMember>> getFamilyMembersForChildren({
+    required String parentId,
+  }) async {
+    if (kDebugMode) {
+      print(
+        '🔍 API: Fetching family members for parent\'s children: $parentId',
+      );
+    }
+
+    try {
+      // First, get the parent's children
+      final children = await getChildrenByParent(parentId: parentId);
+
+      if (children.isEmpty) {
+        if (kDebugMode) {
+          print('✅ API: Parent has no children, so no family members to fetch');
+        }
+        return [];
+      }
+
+      // Get all family members
+      final allFamilyMembers = await getFamilyMembers();
+
+      // Filter to get family members related to the children
+      // but exclude the parent-child relationships we already have
+      final childrenIds = children.map((c) => c.id).toSet();
+      final familyMembersForChildren = allFamilyMembers.where((fm) {
+        // Include if either user or relatedUser is one of the children
+        // but exclude if it's the direct parent-child relationship
+        final hasChild =
+            childrenIds.contains(fm.user.id) ||
+            childrenIds.contains(fm.relatedUser.id);
+        final isParentChildRelation =
+            (fm.user.id == parentId || fm.relatedUser.id == parentId) &&
+            (childrenIds.contains(fm.user.id) ||
+                childrenIds.contains(fm.relatedUser.id));
+
+        return hasChild && !isParentChildRelation;
+      }).toList();
+
+      if (kDebugMode) {
+        print(
+          '✅ API: Found ${familyMembersForChildren.length} family members for parent\'s children',
+        );
+        for (final fm in familyMembersForChildren) {
+          print(
+            '   - ${fm.user.displayName} [${fm.relationshipType}] -> ${fm.relatedUser.displayName}',
+          );
+        }
+      }
+
+      return familyMembersForChildren;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching family members for children: $e');
+      }
+      return [];
+    }
   }
 
   /// Gets the current Olympic Season with all events
