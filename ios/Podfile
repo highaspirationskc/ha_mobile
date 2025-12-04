@@ -1,0 +1,53 @@
+platform :ios, '13.0'
+
+install! 'cocoapods', :warn_for_unused_master_specs_repo => false
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  # Look inside ios/Flutter, not ../Flutter
+  generated_xcode_build_settings_path = File.expand_path(File.join('Flutter', 'Generated.xcconfig'), __dir__)
+  raise "Generated.xcconfig must exist. Run 'flutter pub get' in #{File.expand_path('..', __dir__)}." unless File.exist?(generated_xcode_build_settings_path)
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    match = line.match(/FLUTTER_ROOT\=(.*)/)
+    return match[1].strip if match
+  end
+  raise "FLUTTER_ROOT not found in Generated.xcconfig. Run 'flutter pub get'."
+end
+
+
+
+require File.expand_path(File.join(flutter_root, 'packages', 'flutter_tools', 'bin', 'podhelper.rb'))
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks! :linkage => :static   # helps Swift-based plugins like connectivity_plus
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  # Align all pods’ iOS target
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+    end
+  end
+
+  # Call flutter_additional_ios_build_settings compatible with both old/new Flutter
+  begin
+    # Newer Flutter: expects each Xcode target
+    installer.pods_project.targets.each do |t|
+      flutter_additional_ios_build_settings(t)
+    end
+  rescue NoMethodError
+    # Older Flutter: expects the installer
+    flutter_additional_ios_build_settings(installer)
+  end
+end
+
