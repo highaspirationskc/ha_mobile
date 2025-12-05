@@ -7,6 +7,7 @@ import '../../business/user/entities/role_mentee.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_role.dart';
 import '../../business/user/entities/family_member.dart';
+import '../../business/mentee_spotlight/entities/mentee_spotlight.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
@@ -391,14 +392,32 @@ class ApiService {
     return getMockLeaderboard();
   }
 
-  /// Gets the mentee spotlight (mentee with the most points)
-  Future<MenteeRanking?> getMenteeSpotlight() async {
+  /// Gets the mentee spotlight
+  Future<MenteeSpotlight?> getMenteeSpotlight() async {
     await Future.delayed(const Duration(milliseconds: 300));
     final leaderboard = getMockLeaderboard();
     if (leaderboard.topMentees.isEmpty) return null;
 
-    // Return the mentee with the highest points (should be first in the list)
-    return leaderboard.topMentees.first;
+    // For now, create a spotlight from the top mentee
+    final topMentee = leaderboard.topMentees.first;
+
+    return MenteeSpotlight(
+      id: 'spotlight_${topMentee.mentee.id}',
+      mentee: User(
+        id: topMentee.mentee.id,
+        email: '', // UserRef doesn't have email
+        firstName: topMentee.mentee.firstName,
+        lastName: topMentee.mentee.lastName,
+        image: topMentee.mentee.image,
+        colorIndex: topMentee.mentee.colorIndex,
+      ),
+      description:
+          "${topMentee.mentee.firstName} has been an outstanding member of our program, "
+          "consistently demonstrating leadership and dedication. Their positive attitude "
+          "and commitment to excellence make them a true role model for their peers.",
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
   }
 
   /// Gets all family member relationships

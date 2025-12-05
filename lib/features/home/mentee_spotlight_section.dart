@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../business/leaderboard/entities/leaderboard.dart';
+import '../../business/mentee_spotlight/entities/mentee_spotlight.dart';
+import '../../business/user/entities/user_base.dart';
 import '../../data/services/api_service.dart';
 import '../../core/theme/color_schemes.dart';
 
@@ -12,22 +13,22 @@ class MenteeSpotlightSection extends StatefulWidget {
 }
 
 class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
-  MenteeRanking? _spotlightMentee;
+  MenteeSpotlight? _spotlight;
   bool _isLoading = true;
   bool _isExpanded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSpotlightMentee();
+    _loadSpotlight();
   }
 
-  Future<void> _loadSpotlightMentee() async {
+  Future<void> _loadSpotlight() async {
     try {
-      final mentee = await ApiService.instance.getMenteeSpotlight();
+      final spotlight = await ApiService.instance.getMenteeSpotlight();
       if (mounted) {
         setState(() {
-          _spotlightMentee = mentee;
+          _spotlight = spotlight;
           _isLoading = false;
         });
       }
@@ -52,12 +53,12 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
       );
     }
 
-    if (_spotlightMentee == null) {
+    if (_spotlight == null) {
       return const SizedBox.shrink();
     }
 
-    final mentee = _spotlightMentee!;
-    final teamName = mentee.team?.name ?? 'No Team';
+    final spotlight = _spotlight!;
+    final mentee = spotlight.mentee;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +101,7 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
                 fit: StackFit.expand,
                 children: [
                   // Bottom layer: Profile pic or centered initials
-                  _buildProfileBackground(mentee),
+                  _buildProfileBackground(spotlight),
 
                   // Middle layer: Gradient overlay (transparent at top to black at bottom)
                   Container(
@@ -122,7 +123,7 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
                     ),
                   ),
 
-                  // Top layer: Name, team, and points in lower left corner
+                  // Top layer: Name and title in lower left corner
                   Positioned(
                     left: 20,
                     right: 20,
@@ -133,7 +134,7 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
                       children: [
                         // Name
                         Text(
-                          '${mentee.mentee.firstName ?? ''} ${mentee.mentee.lastName ?? ''}'
+                          '${mentee.firstName ?? ''} ${mentee.lastName ?? ''}'
                               .trim(),
                           style: textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -150,69 +151,12 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
 
-                        // Team and Points
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.group,
-                              size: 16,
-                              color: Colors.white.withOpacity(0.95),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              teamName,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: Colors.white.withOpacity(0.95),
-                                fontWeight: FontWeight.w500,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withOpacity(0.3),
-                                    offset: const Offset(0, 1),
-                                    blurRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              width: 4,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.6),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.white.withOpacity(0.95),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${mentee.points} points',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: Colors.white.withOpacity(0.95),
-                                fontWeight: FontWeight.w600,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withOpacity(0.3),
-                                    offset: const Offset(0, 1),
-                                    blurRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Expanded blurb
+                        // Expanded description
                         if (_isExpanded) ...[
                           const SizedBox(height: 12),
                           Text(
-                            "This week's top Olympian is ${mentee.mentee.firstName} ${mentee.mentee.lastName} who leads with ${mentee.points} points!",
+                            spotlight.description,
                             style: textTheme.bodyMedium?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w500,
@@ -261,8 +205,9 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
     );
   }
 
-  Widget _buildProfileBackground(MenteeRanking mentee) {
-    final image = mentee.mentee.image;
+  Widget _buildProfileBackground(MenteeSpotlight spotlight) {
+    // Use spotlight imageUrl first, then fall back to mentee's image
+    final image = spotlight.imageUrl ?? spotlight.mentee.image;
 
     // If there's an image, display it
     if (image != null && image.trim().isNotEmpty) {
@@ -274,14 +219,16 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
           image,
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
-          errorBuilder: (_, __, ___) => _buildInitialsBackground(mentee),
+          errorBuilder: (_, __, ___) =>
+              _buildInitialsBackground(spotlight.mentee),
         );
       } else if (isAsset) {
         return Image.asset(
           image,
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
-          errorBuilder: (_, __, ___) => _buildInitialsBackground(mentee),
+          errorBuilder: (_, __, ___) =>
+              _buildInitialsBackground(spotlight.mentee),
         );
       } else {
         // assume file path
@@ -289,24 +236,22 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
           File(image),
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
-          errorBuilder: (_, __, ___) => _buildInitialsBackground(mentee),
+          errorBuilder: (_, __, ___) =>
+              _buildInitialsBackground(spotlight.mentee),
         );
       }
     }
 
     // Otherwise, show centered initials
-    return _buildInitialsBackground(mentee);
+    return _buildInitialsBackground(spotlight.mentee);
   }
 
-  Widget _buildInitialsBackground(MenteeRanking mentee) {
-    final initials = _buildInitials(
-      mentee.mentee.firstName,
-      mentee.mentee.lastName,
-    );
+  Widget _buildInitialsBackground(User mentee) {
+    final initials = _buildInitials(mentee.firstName, mentee.lastName);
     final bgColor = _resolveColor(
-      mentee.mentee.colorIndex,
-      mentee.mentee.firstName,
-      mentee.mentee.lastName,
+      mentee.colorIndex,
+      mentee.firstName,
+      mentee.lastName,
     );
 
     return Container(
