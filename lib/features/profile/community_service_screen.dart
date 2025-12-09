@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../business/community_service/entities/community_service.dart';
+import '../../core/theme/brand_colors.dart';
 import '../../data/services/api_service.dart';
 import '../../core/session.dart';
-import '../../presentation/widgets/list_tile_community_service.dart';
+import '../../presentation/widgets/button_long.dart';
+import '../../presentation/widgets/bottom_sheet_community_service.dart';
 
 class CommunityServiceScreen extends StatefulWidget {
   const CommunityServiceScreen({super.key});
@@ -64,7 +67,7 @@ class _CommunityServiceScreenState extends State<CommunityServiceScreen> {
     final t = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: cs.background,
+      backgroundColor: cs.surface,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -72,169 +75,159 @@ class _CommunityServiceScreenState extends State<CommunityServiceScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Summary Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Icon
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E3A8A),
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                          child: const Icon(
-                            Icons.home_work_outlined,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Title
-                        Text(
-                          'Community Service',
-                          style: t.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: cs.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Stats Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            // Events Count
-                            Column(
-                              children: [
-                                Text(
-                                  '${_services.length}',
-                                  style: t.headlineMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: cs.primary,
-                                  ),
-                                ),
-                                Text(
-                                  'Events',
-                                  style: t.bodyMedium?.copyWith(
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // Divider
-                            Container(
-                              width: 1,
-                              height: 40,
-                              color: cs.outlineVariant,
-                            ),
-
-                            // Total Hours
-                            Column(
-                              children: [
-                                Text(
-                                  '$_totalHours',
-                                  style: t.headlineMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: cs.primary,
-                                  ),
-                                ),
-                                Text(
-                                  'Hours',
-                                  style: t.bodyMedium?.copyWith(
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
+                  // Title
+                  Text(
+                    'Giving Back',
+                    style: t.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: cs.onSurface,
                     ),
                   ),
-
                   const SizedBox(height: 24),
 
-                  // Events List
-                  if (_services.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                  // Hero Image
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/images/community_service_gardening.png',
+                        fit: BoxFit.cover,
                       ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.home_work_outlined,
-                            size: 48,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No Community Service Yet',
-                            style: t.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Start volunteering to track your community service hours!',
-                            style: t.bodyMedium?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Your Events',
-                          style: t.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ..._services.map(
-                          (service) => ListTileCommunityService(
-                            service: service,
-                            onTap: () {
-                              // TODO: Navigate to service detail if needed
-                            },
-                          ),
-                        ),
-                      ],
                     ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Stats Cards Row
+                  Row(
+                    children: [
+                      // Events Card
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            children: [
+                              // Icon in top right
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: SvgPicture.asset(
+                                  'assets/icons/material-symbols_event.svg',
+                                  width: 24,
+                                  height: 24,
+                                ),
+                              ),
+                              // Text in bottom left
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 32),
+                                  Text(
+                                    'You gave back',
+                                    style: t.bodyMedium?.copyWith(
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${_services.length} times',
+                                    style: t.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: cs.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // Hours Card
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            children: [
+                              // Icon in top right
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: SvgPicture.asset(
+                                  'assets/icons/solar_hourglass-bold.svg',
+                                  width: 24,
+                                  height: 24,
+                                ),
+                              ),
+                              // Text in bottom left
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 32),
+                                  Text(
+                                    'You helped for',
+                                    style: t.bodyMedium?.copyWith(
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Text(
+                                    '$_totalHours hours',
+                                    style: t.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: cs.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Add Community Service Button
+                  ButtonLong(
+                    label: 'Add Community Service',
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        useRootNavigator: true,
+                        builder: (context) =>
+                            const BottomSheetCommunityService(),
+                      );
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: kHAPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
