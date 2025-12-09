@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/session.dart';
-import '../../core/routes.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_refs.dart';
 import '../../data/services/api_service.dart';
@@ -26,9 +25,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _totalCommunityServiceHours = 0;
   int _totalCommunityServiceEvents = 0;
   int _totalAttendance = 0;
-  int _totalPulses = 0;
   int _totalPoints = 0;
   UserRef? _mentor;
+  List<UserRef> _guardians = [];
 
   @override
   void initState() {
@@ -52,8 +51,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Fetch current user data from API
-      final userData = await ApiService.instance.getCurrentUser();
+      // Fetch current user data from API (includes mentor if user is a mentee)
+      final currentUserData = await ApiService.instance.getCurrentUser();
 
       final hours = await ApiService.instance.getTotalCommunityServiceHours(
         userId: currentUserId,
@@ -64,22 +63,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final attendance = await ApiService.instance.getTotalAttendance(
         userId: currentUserId,
       );
-      final pulses = await ApiService.instance.getPulses(userId: currentUserId);
-      final menteeData = await ApiService.instance.getMenteeData(
-        userId: currentUserId,
-      );
 
       if (mounted) {
         setState(() {
-          _currentUser = userData;
+          _currentUser = currentUserData.user;
+          _mentor = currentUserData.mentor;
+          _guardians = currentUserData.guardians;
           _totalCommunityServiceHours = hours;
           _totalCommunityServiceEvents = services.length;
           _totalAttendance = attendance;
-          _totalPulses = pulses.length;
           _totalPoints =
               attendance +
               services.length; // Points = attendance + community service events
-          _mentor = menteeData?.mentor;
           _isLoading = false;
         });
       }
@@ -171,6 +166,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
 
+              // Family Section (only show for mentees with guardians)
+              if (currentUserKind.value == CurrentUserKind.mentee &&
+                  _guardians.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Family',
+                        style: t.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    ..._guardians.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final guardian = entry.value;
+                      return Column(
+                        children: [
+                          _buildGuardianTile(context, cs, t, guardian),
+                          if (index < _guardians.length - 1)
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              indent: 72,
+                              color: cs.outlineVariant.withOpacity(0.3),
+                            ),
+                        ],
+                      );
+                    }),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+
               // Stats Section (only show for mentees)
               if (currentUserKind.value == CurrentUserKind.mentee)
                 Column(
@@ -192,13 +233,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: cs.outlineVariant.withOpacity(0.5),
                     ),
                     _buildAttendanceTile(context, cs, t),
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      indent: 72,
-                      color: cs.outlineVariant.withOpacity(0.3),
-                    ),
-                    _buildPulseTile(context, cs, t),
                     Divider(
                       height: 1,
                       thickness: 1,
@@ -295,8 +329,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMentorTile(BuildContext context, ColorScheme cs, TextTheme t) {
+    final phoneNumber = _mentor!.phone ?? '';
+
     return InkWell(
-      onTap: () => _callMentor(context),
+      onTap: phoneNumber.isNotEmpty ? () => _callMentor(context) : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
@@ -318,23 +354,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
+                    'Mentor',
+                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
                     _mentor!.displayName,
                     style: t.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: cs.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Tap to call',
-                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                  ),
                 ],
               ),
             ),
 
-            // Phone Icon
-            Icon(Icons.phone, color: cs.primary, size: 24),
+            // Phone Number (tappable)
+            if (phoneNumber.isNotEmpty)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    phoneNumber,
+                    style: t.bodyMedium?.copyWith(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.phone, color: cs.primary, size: 20),
+                ],
+              ),
           ],
         ),
       ),
@@ -342,8 +392,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _callMentor(BuildContext context) async {
-    const phoneNumber =
-        '(620) 555-1234'; // TODO: Make this dynamic from mentor data
+    final phoneNumber = _mentor?.phone ?? '';
+    if (phoneNumber.isEmpty) return;
+
     final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
 
     try {
@@ -373,6 +424,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  Widget _buildGuardianTile(
+    BuildContext context,
+    ColorScheme cs,
+    TextTheme t,
+    UserRef guardian,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          // Guardian Avatar
+          Avatar(
+            firstName: guardian.firstName,
+            lastName: guardian.lastName,
+            image: guardian.image,
+            colorIndex: guardian.colorIndex,
+            size: 48,
+            editable: false,
+          ),
+          const SizedBox(width: 16),
+
+          // Guardian Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Guardian',
+                  style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  guardian.displayName,
+                  style: t.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildAttendanceTile(
@@ -420,54 +517,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 2),
                   Text(
                     '$_totalAttendance events',
-                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-            // Arrow Icon
-            Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPulseTile(BuildContext context, ColorScheme cs, TextTheme t) {
-    return InkWell(
-      onTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.pulses);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // Pulse Icon
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(Icons.favorite, color: cs.primary, size: 24),
-            ),
-            const SizedBox(width: 16),
-            // Pulse Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Pulses',
-                    style: t.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$_totalPulses entries',
                     style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],

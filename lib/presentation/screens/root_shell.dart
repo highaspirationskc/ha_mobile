@@ -78,10 +78,10 @@ class _RootShellState extends State<RootShell> {
 
   Future<void> _loadCurrentUser() async {
     try {
-      final user = await ApiService.instance.getCurrentUser();
+      final currentUserData = await ApiService.instance.getCurrentUser();
       if (mounted) {
         setState(() {
-          _currentUser = user;
+          _currentUser = currentUserData.user;
         });
       }
     } catch (e) {

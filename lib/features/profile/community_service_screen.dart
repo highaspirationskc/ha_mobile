@@ -6,6 +6,7 @@ import '../../data/services/api_service.dart';
 import '../../core/session.dart';
 import '../../presentation/widgets/button_long.dart';
 import '../../presentation/widgets/bottom_sheet_community_service.dart';
+import 'widgets/community_service_tile.dart';
 
 class CommunityServiceScreen extends StatefulWidget {
   const CommunityServiceScreen({super.key});
@@ -139,7 +140,7 @@ class _CommunityServiceScreenState extends State<CommunityServiceScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${_services.length} times',
+                                    '${_services.length} ${_services.length == 1 ? 'time' : 'times'}',
                                     style: t.titleLarge?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: cs.onSurface,
@@ -192,7 +193,7 @@ class _CommunityServiceScreenState extends State<CommunityServiceScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '$_totalHours hours',
+                                    '$_totalHours ${_totalHours == 1 ? 'hour' : 'hours'}',
                                     style: t.titleLarge?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: cs.onSurface,
@@ -228,6 +229,39 @@ class _CommunityServiceScreenState extends State<CommunityServiceScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // Divider
+                  Divider(height: 1, thickness: 1, color: cs.outlineVariant),
+                  const SizedBox(height: 24),
+
+                  // My Service Header
+                  Text(
+                    'My Service',
+                    style: t.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Service List
+                  if (_services.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'No community service logged yet',
+                          style: t.bodyMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._services.map(
+                      (service) => CommunityServiceTile(service: service),
+                    ),
                 ],
               ),
             ),

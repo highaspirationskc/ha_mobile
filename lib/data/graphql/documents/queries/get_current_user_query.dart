@@ -10,6 +10,29 @@ const String getCurrentUserQuery = r'''
       lastName
       avatarUrl
       role
+      mentee {
+        id
+        mentor {
+          id
+          user {
+            id
+            firstName
+            lastName
+            email
+            avatarUrl
+          }
+        }
+        guardians {
+          id
+          user {
+            id
+            firstName
+            lastName
+            email
+            avatarUrl
+          }
+        }
+      }
     }
   }
 ''';

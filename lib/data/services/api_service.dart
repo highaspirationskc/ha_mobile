@@ -7,6 +7,7 @@ import '../../business/user/entities/role_mentee.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_role.dart';
 import '../../business/user/entities/family_member.dart';
+import '../../business/user/entities/user_refs.dart';
 import '../../business/mentee_spotlight/entities/mentee_spotlight.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
@@ -17,6 +18,19 @@ import '../../data/mock/mock_data.dart';
 import '../mock/mock_leaderboard.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/queries/queries.dart';
+
+/// Response class for getCurrentUser that includes user, optional mentor, and guardians
+class CurrentUserData {
+  final User user;
+  final UserRef? mentor;
+  final List<UserRef> guardians;
+
+  const CurrentUserData({
+    required this.user,
+    this.mentor,
+    this.guardians = const [],
+  });
+}
 
 class ApiService {
   ApiService._() {
@@ -155,8 +169,8 @@ class ApiService {
     return mockMenteesByUserId[userId];
   }
 
-  /// Gets the current authenticated user
-  Future<User> getCurrentUser() async {
+  /// Gets the current authenticated user with mentor data if available
+  Future<CurrentUserData> getCurrentUser() async {
     if (kDebugMode) {
       print('🔍 API: Fetching current user data');
     }
@@ -201,13 +215,56 @@ class ApiService {
             : {},
       );
 
+      // Parse mentor and guardians from mentee data if available
+      UserRef? mentor;
+      List<UserRef> guardians = [];
+
+      final menteeData = userData['mentee'] as Map<String, dynamic>?;
+      if (menteeData != null) {
+        // Parse mentor
+        final mentorData = menteeData['mentor'] as Map<String, dynamic>?;
+        if (mentorData != null) {
+          final mentorUserData = mentorData['user'] as Map<String, dynamic>?;
+          if (mentorUserData != null) {
+            mentor = UserRef(
+              id: mentorUserData['id'].toString(),
+              firstName: mentorUserData['firstName'] as String?,
+              lastName: mentorUserData['lastName'] as String?,
+              email: mentorUserData['email'] as String?,
+              image: mentorUserData['avatarUrl'] as String?,
+            );
+            if (kDebugMode) {
+              print('✅ API: Found mentor: ${mentor.displayName}');
+            }
+          }
+        }
+
+        // Parse guardians
+        final guardiansData = menteeData['guardians'] as List<dynamic>?;
+        if (guardiansData != null) {
+          guardians = guardiansData.map((guardian) {
+            final guardianUserData = guardian['user'] as Map<String, dynamic>;
+            return UserRef(
+              id: guardianUserData['id'].toString(),
+              firstName: guardianUserData['firstName'] as String?,
+              lastName: guardianUserData['lastName'] as String?,
+              email: guardianUserData['email'] as String?,
+              image: guardianUserData['avatarUrl'] as String?,
+            );
+          }).toList();
+          if (kDebugMode) {
+            print('✅ API: Found ${guardians.length} guardians');
+          }
+        }
+      }
+
       if (kDebugMode) {
         print(
           '✅ API: Fetched current user: ${user.displayName} (${user.email})',
         );
       }
 
-      return user;
+      return CurrentUserData(user: user, mentor: mentor, guardians: guardians);
     } catch (e) {
       if (kDebugMode) {
         print('❌ API: Exception fetching current user: $e');
