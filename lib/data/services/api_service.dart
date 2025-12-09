@@ -223,21 +223,43 @@ class ApiService {
     }
 
     try {
-      // Get all family members
-      final allFamilyMembers = await getFamilyMembers();
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getMenteesByMentorQuery),
+          variables: {'mentorId': mentorId},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
 
-      // Filter to find relationships where:
-      // - user is the mentor (mentorId)
-      // - relationshipType is "mentor" or similar
-      // - relatedUser is the mentee
-      final menteeFamilyMembers = allFamilyMembers.where((fm) {
-        return fm.user.id == mentorId &&
-            (fm.relationshipType.toLowerCase() == 'mentor' ||
-                fm.relationshipType.toLowerCase() == 'mentee');
-      }).toList();
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error fetching mentees: ${result.exception}');
+        }
+        return [];
+      }
 
-      // Extract the mentees (relatedUsers)
-      final mentees = menteeFamilyMembers.map((fm) => fm.relatedUser).toList();
+      final userData = result.data?['user'];
+      if (userData == null) {
+        if (kDebugMode) {
+          print('❌ API: No user data found for mentor $mentorId');
+        }
+        return [];
+      }
+
+      final mentorData = userData['mentor'];
+      if (mentorData == null) {
+        if (kDebugMode) {
+          print('❌ API: User $mentorId is not a mentor');
+        }
+        return [];
+      }
+
+      final menteesData = mentorData['mentees'] as List<dynamic>? ?? [];
+      final mentees = menteesData
+          .map(
+            (mentee) => User.fromJson(mentee['user'] as Map<String, dynamic>),
+          )
+          .toList();
 
       if (kDebugMode) {
         print('✅ API: Found ${mentees.length} mentees for mentor $mentorId');

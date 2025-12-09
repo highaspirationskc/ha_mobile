@@ -4,15 +4,13 @@ import 'user_role.dart';
 class User {
   final String id;
 
-  // Core identity / profile
   final String? firstName;
   final String? lastName;
   final String email;
   final String? phone; // ?
-  final String? image; // ? asset/file/url
-  final int? colorIndex; // profile color index (0..11)
+  final String? image;
+  final int? colorIndex;
 
-  /// Roles this user has (drives which role-data models exist for them).
   final Set<UserRole> roles;
 
   const User({
@@ -58,7 +56,8 @@ class User {
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
       phone: json['phone'] as String?,
-      image: json['image'] as String?,
+      // Support both 'image' and 'avatarUrl' from API
+      image: (json['image'] ?? json['avatarUrl']) as String?,
       colorIndex: json['colorIndex'] as int?,
       roles: (json['role'] as String?) != null
           ? {UserRole.fromString(json['role'] as String)}
