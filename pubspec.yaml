@@ -48,6 +48,7 @@ dependencies:
   shared_preferences: ^2.3.3
   flutter_slidable: ^3.1.0
   flutter_dotenv: ^5.1.0
+  firebase_core: ^4.2.1
 
 
 dev_dependencies:

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "125748060753",
+    "project_id": "high-aspirations-app",
+    "storage_bucket": "high-aspirations-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:125748060753:android:b1d5e4d3fa946823aece70",
+        "android_client_info": {
+          "package_name": "com.highaspirations.ha_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChM8or4HfQ6A448bg7rbQMsFOeOCef01Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
