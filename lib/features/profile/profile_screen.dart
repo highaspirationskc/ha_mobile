@@ -1,6 +1,7 @@
 // lib/presentation/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/session.dart';
 import '../../business/user/entities/user.dart';
@@ -322,10 +323,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
       image: _imageOverride ?? u.image,
       colorIndex: _colorIndexOverride ?? u.colorIndex,
       editable: true,
-      onImageChanged: (path) => setState(() => _imageOverride = path),
+      onImageChanged: (path) => _handleAvatarChange(path),
       onColorChanged: (i) => setState(() => _colorIndexOverride = i),
       size: 64,
     );
+  }
+
+  Future<void> _handleAvatarChange(String? path) async {
+    if (path == null) {
+      // Remove avatar - just clear local override for now
+      setState(() => _imageOverride = null);
+      return;
+    }
+
+    // Show loading indicator
+    setState(() => _imageOverride = path);
+
+    try {
+      // Read file bytes (works on both web and native)
+      final xFile = XFile(path);
+      final bytes = await xFile.readAsBytes();
+      final fileName = path.split('/').last;
+
+      // Upload the new avatar
+      final newAvatarUrl = await ApiService.instance.updateUserAvatar(
+        userId: currentUserId,
+        imageBytes: bytes,
+        fileName: fileName.isNotEmpty ? fileName : 'avatar.jpg',
+      );
+
+      if (mounted) {
+        setState(() {
+          _imageOverride = newAvatarUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Avatar updated successfully!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        // Revert to previous image on error
+        setState(() => _imageOverride = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update avatar: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildMentorTile(BuildContext context, ColorScheme cs, TextTheme t) {

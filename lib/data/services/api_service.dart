@@ -1,7 +1,10 @@
 // lib/data/services/api_service.dart
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../business/community_service/entities/community_service.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../business/user/entities/user.dart';
@@ -18,6 +21,7 @@ import '../../data/mock/mock_data.dart';
 import '../mock/mock_leaderboard.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/queries/queries.dart';
+import '../graphql/documents/mutations/update_user_mutation.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, and guardians
 class CurrentUserData {
@@ -842,6 +846,159 @@ class ApiService {
       }
       // On any error, return mock data
       return getCurrentSeason();
+    }
+  }
+
+  /// Upload media (image) to the server
+  /// Returns the media ID and URL on success
+  /// Uses bytes instead of file path for web compatibility
+  Future<({int id, String url})> uploadMedia({
+    required List<int> bytes,
+    required String fileName,
+    required String category,
+  }) async {
+    if (kDebugMode) {
+      print('📤 API: Uploading media file: $fileName (category: $category)');
+    }
+
+    final token = _graphQLClient.authToken;
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final uri = Uri.parse('https://api.highaspirationskc.org/media');
+    final request = http.MultipartRequest('POST', uri);
+
+    // Add headers
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+
+    // Add file from bytes (works on both web and native)
+    final mimeType = _getMimeType(fileName);
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: fileName,
+        contentType: mimeType,
+      ),
+    );
+
+    // Add category field
+    request.fields['category'] = category;
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (kDebugMode) {
+        print('📦 API: Upload response status: ${response.statusCode}');
+        print('   Body: ${response.body}');
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final id = data['id'] as int;
+        final url = data['url'] as String;
+
+        if (kDebugMode) {
+          print('✅ API: Media uploaded successfully - ID: $id, URL: $url');
+        }
+
+        return (id: id, url: url);
+      } else {
+        throw Exception(
+          'Failed to upload media: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception uploading media: $e');
+      }
+      rethrow;
+    }
+  }
+
+  MediaType _getMimeType(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return MediaType('image', 'jpeg');
+      case 'png':
+        return MediaType('image', 'png');
+      case 'gif':
+        return MediaType('image', 'gif');
+      case 'webp':
+        return MediaType('image', 'webp');
+      default:
+        return MediaType('image', 'jpeg');
+    }
+  }
+
+  /// Update user avatar by uploading image and updating user profile
+  /// Returns the new avatar URL on success
+  /// Uses bytes for web compatibility
+  Future<String> updateUserAvatar({
+    required String userId,
+    required List<int> imageBytes,
+    required String fileName,
+  }) async {
+    if (kDebugMode) {
+      print('🖼️ API: Updating avatar for user: $userId');
+    }
+
+    try {
+      // Step 1: Upload the image
+      final uploadResult = await uploadMedia(
+        bytes: imageBytes,
+        fileName: fileName,
+        category: 'avatar',
+      );
+
+      // Step 2: Update user with the new avatar ID
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(updateUserMutation),
+          variables: {
+            'input': {'id': userId, 'avatarId': uploadResult.id.toString()},
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error updating user avatar: ${result.exception}',
+          );
+        }
+        throw Exception('Failed to update user avatar: ${result.exception}');
+      }
+
+      final updateData = result.data?['updateUser'] as Map<String, dynamic>?;
+      final errors = updateData?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception('Failed to update avatar: ${errors.join(', ')}');
+      }
+
+      final userData = updateData?['user'] as Map<String, dynamic>?;
+      final newAvatarUrl =
+          userData?['avatarUrl'] as String? ?? uploadResult.url;
+
+      if (kDebugMode) {
+        print('✅ API: Avatar updated successfully - URL: $newAvatarUrl');
+      }
+
+      // Notify listeners that user data has changed
+      changes.value++;
+
+      return newAvatarUrl;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception updating user avatar: $e');
+      }
+      rethrow;
     }
   }
 }
