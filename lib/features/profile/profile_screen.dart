@@ -8,8 +8,9 @@ import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_refs.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/auth_service.dart';
-import '../widgets/avatar.dart';
-import 'login_screen.dart';
+import '../../presentation/widgets/avatar.dart';
+import '../../presentation/screens/login_screen.dart';
+import 'widgets/community_service_tile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -204,7 +205,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       indent: 72,
                       color: cs.outlineVariant.withOpacity(0.3),
                     ),
-                    _buildCommunityServiceTile(context, cs, t),
+                    CommunityServiceTile(
+                      totalHours: _totalCommunityServiceHours,
+                      totalEvents: _totalCommunityServiceEvents,
+                    ),
                     Divider(
                       height: 1,
                       thickness: 1,
@@ -464,58 +468,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 2),
                   Text(
                     '$_totalPulses entries',
-                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-            // Arrow Icon
-            Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCommunityServiceTile(
-    BuildContext context,
-    ColorScheme cs,
-    TextTheme t,
-  ) {
-    return InkWell(
-      onTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.communityService);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // Community Service Icon
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(Icons.groups, color: cs.primary, size: 24),
-            ),
-            const SizedBox(width: 16),
-            // Community Service Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Community Service',
-                    style: t.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$_totalCommunityServiceHours hrs · $_totalCommunityServiceEvents events',
                     style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],

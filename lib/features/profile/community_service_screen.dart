@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../business/community_service/entities/community_service.dart';
 import '../../data/services/api_service.dart';
 import '../../core/session.dart';
-import '../widgets/list_tile_community_service.dart';
+import '../../presentation/widgets/list_tile_community_service.dart';
 
 class CommunityServiceScreen extends StatefulWidget {
   const CommunityServiceScreen({super.key});
