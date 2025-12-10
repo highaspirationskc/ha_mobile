@@ -33,6 +33,19 @@ const String getCurrentUserQuery = r'''
           }
         }
       }
+      guardian {
+        id
+        children {
+          id
+          user {
+            id
+            firstName
+            lastName
+            email
+            avatarUrl
+          }
+        }
+      }
     }
   }
 ''';

@@ -57,6 +57,7 @@ void _updateUserKindFromRole(String? role) {
       currentUserKind.value = CurrentUserKind.volunteer;
       break;
     case 'parent':
+    case 'guardian':
       currentUserKind.value = CurrentUserKind.parent;
       break;
     case 'mentee':

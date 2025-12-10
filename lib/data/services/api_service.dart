@@ -16,7 +16,6 @@ import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
 import '../../business/events/entities/event.dart';
-import '../../data/mock/mock_data.dart';
 import '../mock/mock_leaderboard.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/queries/queries.dart';
@@ -24,16 +23,18 @@ import '../graphql/documents/mutations/update_user_mutation.dart';
 import '../graphql/documents/mutations/event_mutations.dart';
 import 'olympic_season_service.dart';
 
-/// Response class for getCurrentUser that includes user, optional mentor, and guardians
+/// Response class for getCurrentUser that includes user, optional mentor, guardians, and children
 class CurrentUserData {
   final User user;
   final UserRef? mentor;
   final List<UserRef> guardians;
+  final List<UserRef> children; // For guardian users
 
   const CurrentUserData({
     required this.user,
     this.mentor,
     this.guardians = const [],
+    this.children = const [],
   });
 }
 
@@ -306,10 +307,97 @@ class ApiService {
     return services.fold<int>(0, (total, service) => total + service.hours);
   }
 
-  /// Gets mentee data for a user
+  /// Gets mentee data for a user including guardians and mentor
   Future<MenteeData?> getMenteeData({required String userId}) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    return mockMenteesByUserId[userId];
+    if (kDebugMode) {
+      print('🔍 API: Fetching mentee data for user: $userId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getUserMenteeDataQuery),
+          variables: {'id': userId},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error fetching mentee data: ${result.exception}',
+          );
+        }
+        return null;
+      }
+
+      final userData = result.data?['user'] as Map<String, dynamic>?;
+      if (userData == null) {
+        if (kDebugMode) {
+          print('⚠️ API: No user data found for ID: $userId');
+        }
+        return null;
+      }
+
+      final menteeData = userData['mentee'] as Map<String, dynamic>?;
+      if (menteeData == null) {
+        if (kDebugMode) {
+          print('⚠️ API: User is not a mentee');
+        }
+        return null;
+      }
+
+      // Parse guardians (parents)
+      List<UserRef> parents = [];
+      final guardiansData = menteeData['guardians'] as List<dynamic>?;
+      if (guardiansData != null) {
+        parents = guardiansData.map((guardian) {
+          final guardianUserData = guardian['user'] as Map<String, dynamic>;
+          return UserRef(
+            id: guardianUserData['id'].toString(),
+            firstName: guardianUserData['firstName'] as String?,
+            lastName: guardianUserData['lastName'] as String?,
+            email: guardianUserData['email'] as String?,
+            image: guardianUserData['avatarUrl'] as String?,
+          );
+        }).toList();
+      }
+
+      // Parse mentor
+      UserRef? mentor;
+      final mentorData = menteeData['mentor'] as Map<String, dynamic>?;
+      if (mentorData != null) {
+        final mentorUserData = mentorData['user'] as Map<String, dynamic>?;
+        if (mentorUserData != null) {
+          mentor = UserRef(
+            id: mentorUserData['id'].toString(),
+            firstName: mentorUserData['firstName'] as String?,
+            lastName: mentorUserData['lastName'] as String?,
+            email: mentorUserData['email'] as String?,
+            image: mentorUserData['avatarUrl'] as String?,
+          );
+        }
+      }
+
+      if (kDebugMode) {
+        print(
+          '✅ API: Found ${parents.length} guardians and ${mentor != null ? 1 : 0} mentor',
+        );
+      }
+
+      return MenteeData(
+        userId: userId,
+        parents: parents.isNotEmpty ? parents : null,
+        mentor: mentor,
+        totalAttendance: 0,
+        currentStreak: 0,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching mentee data: $e');
+      }
+      return null;
+    }
   }
 
   /// Gets the current authenticated user with mentor data if available
@@ -401,13 +489,40 @@ class ApiService {
         }
       }
 
+      // Parse children from guardian data if available (for guardian/parent users)
+      List<UserRef> children = [];
+      final guardianData = userData['guardian'] as Map<String, dynamic>?;
+      if (guardianData != null) {
+        final childrenData = guardianData['children'] as List<dynamic>?;
+        if (childrenData != null) {
+          children = childrenData.map((child) {
+            final childUserData = child['user'] as Map<String, dynamic>;
+            return UserRef(
+              id: childUserData['id'].toString(),
+              firstName: childUserData['firstName'] as String?,
+              lastName: childUserData['lastName'] as String?,
+              email: childUserData['email'] as String?,
+              image: childUserData['avatarUrl'] as String?,
+            );
+          }).toList();
+          if (kDebugMode) {
+            print('✅ API: Found ${children.length} children for guardian');
+          }
+        }
+      }
+
       if (kDebugMode) {
         print(
           '✅ API: Fetched current user: ${user.displayName} (${user.email})',
         );
       }
 
-      return CurrentUserData(user: user, mentor: mentor, guardians: guardians);
+      return CurrentUserData(
+        user: user,
+        mentor: mentor,
+        guardians: guardians,
+        children: children,
+      );
     } catch (e) {
       if (kDebugMode) {
         print('❌ API: Exception fetching current user: $e');
@@ -480,70 +595,35 @@ class ApiService {
   }
 
   /// Gets all children assigned to the current authenticated parent
+  /// Uses the guardian.children data from getCurrentUser
   Future<List<User>> getChildrenByParent({required String parentId}) async {
     if (kDebugMode) {
       print('🔍 API: Fetching children for parent: $parentId');
     }
 
     try {
-      // Get all family members
-      final allFamilyMembers = await getFamilyMembers();
+      // Fetch current user which includes guardian.children
+      final currentUserData = await getCurrentUser();
 
-      if (kDebugMode) {
-        print(
-          '📦 API: Retrieved ${allFamilyMembers.length} total family members',
+      // Convert UserRef children to User objects
+      final children = currentUserData.children.map((childRef) {
+        return User(
+          id: childRef.id,
+          firstName: childRef.firstName,
+          lastName: childRef.lastName,
+          email: childRef.email,
+          image: childRef.image,
         );
-        for (final fm in allFamilyMembers) {
-          print(
-            '   - ${fm.user.displayName} (ID: ${fm.user.id}) [${fm.relationshipType}] -> ${fm.relatedUser.displayName} (ID: ${fm.relatedUser.id})',
-          );
-        }
-      }
-
-      // Filter to find relationships where:
-      // - user is the parent (parentId)
-      // - relationshipType is "parent" or "child" related
-      // - relatedUser is the child
-      final childFamilyMembers = allFamilyMembers.where((fm) {
-        final isParentRelationship =
-            fm.user.id == parentId &&
-            (fm.relationshipType.toLowerCase().contains('parent') ||
-                fm.relationshipType.toLowerCase().contains('child'));
-
-        // Also check the reverse: if the relatedUser is the parent and user is the child
-        final isReverseRelationship =
-            fm.relatedUser.id == parentId &&
-            (fm.relationshipType.toLowerCase().contains('parent') ||
-                fm.relationshipType.toLowerCase().contains('child'));
-
-        return isParentRelationship || isReverseRelationship;
       }).toList();
 
-      // Extract the children
-      // If user is parent, child is relatedUser
-      // If relatedUser is parent, child is user
-      final children = childFamilyMembers.map((fm) {
-        return fm.user.id == parentId ? fm.relatedUser : fm.user;
-      }).toList();
-
-      // Remove duplicates
-      final uniqueChildren = <String, User>{};
-      for (final child in children) {
-        uniqueChildren[child.id] = child;
-      }
-
-      final childrenList = uniqueChildren.values.toList();
-
       if (kDebugMode) {
-        print(
-          '✅ API: Found ${childrenList.length} children for parent $parentId',
-        );
-        for (final child in childrenList) {
+        print('✅ API: Found ${children.length} children for parent $parentId');
+        for (final child in children) {
           print('   - ${child.firstName} ${child.lastName} (ID: ${child.id})');
         }
       }
 
-      return childrenList;
+      return children;
     } catch (e) {
       if (kDebugMode) {
         print('❌ API: Exception fetching children: $e');

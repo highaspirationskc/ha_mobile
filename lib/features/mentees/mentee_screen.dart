@@ -2,11 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../business/user/entities/user.dart';
+import '../../business/user/entities/user_refs.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../data/services/api_service.dart';
 import '../../core/theme/brand_colors.dart';
+import '../../presentation/widgets/avatar.dart';
 import '../../presentation/widgets/message_bottom_sheet.dart';
-import 'widgets/parent_contact_tile.dart';
 
 class MenteeScreen extends StatefulWidget {
   final User mentee;
@@ -104,67 +105,121 @@ class _MenteeScreenState extends State<MenteeScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Parents Section
+            // Loading indicator
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.all(32),
                 child: CircularProgressIndicator(),
               )
-            else if (_menteeData?.parents != null &&
-                _menteeData!.parents!.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'Parents',
-                      style: t.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+            else ...[
+              // Mentor Section
+              if (_menteeData?.mentor != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Mentor',
+                        style: t.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: cs.outlineVariant.withOpacity(0.5),
-                  ),
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _menteeData!.parents!.length,
-                    separatorBuilder: (_, __) => Divider(
+                    const SizedBox(height: 8),
+                    Divider(
                       height: 1,
                       thickness: 1,
-                      indent: 72,
-                      color: cs.outlineVariant.withOpacity(0.3),
+                      color: cs.outlineVariant.withOpacity(0.5),
                     ),
-                    itemBuilder: (_, i) {
-                      final parent = _menteeData!.parents![i];
-                      return ParentContactTile(
-                        parent: parent,
-                        phoneNumber: parent.phone,
-                        email: parent.email,
-                      );
-                    },
-                  ),
-                ],
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    Icon(Icons.family_restroom, size: 48, color: cs.outline),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No parent information available',
-                      style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
+                    _buildContactTile(
+                      context,
+                      userRef: _menteeData!.mentor!,
+                      label: 'Mentor',
+                      cs: cs,
+                      t: t,
                     ),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
-              ),
+
+              // Guardians/Parents Section
+              if (_menteeData?.parents != null &&
+                  _menteeData!.parents!.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Family',
+                        style: t.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    ..._menteeData!.parents!.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final parent = entry.value;
+                      return Column(
+                        children: [
+                          _buildContactTile(
+                            context,
+                            userRef: parent,
+                            label: 'Guardian',
+                            cs: cs,
+                            t: t,
+                          ),
+                          if (index < _menteeData!.parents!.length - 1)
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              indent: 72,
+                              color: cs.outlineVariant.withOpacity(0.3),
+                            ),
+                        ],
+                      );
+                    }),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+
+              // No info message if neither mentor nor parents
+              if (_menteeData?.mentor == null &&
+                  (_menteeData?.parents == null ||
+                      _menteeData!.parents!.isEmpty))
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      Icon(Icons.people_outline, size: 48, color: cs.outline),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No contact information available',
+                        style: t.bodyLarge?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
 
             const SizedBox(height: 32),
           ],
@@ -280,6 +335,38 @@ class _MenteeScreenState extends State<MenteeScreen> {
       context,
       recipientName: widget.mentee.displayName,
       recipientId: widget.mentee.id,
+    );
+  }
+
+  Widget _buildContactTile(
+    BuildContext context, {
+    required UserRef userRef,
+    required String label,
+    required ColorScheme cs,
+    required TextTheme t,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      leading: Avatar(
+        firstName: userRef.firstName,
+        lastName: userRef.lastName,
+        image: userRef.image,
+        size: 48,
+      ),
+      title: Text(
+        label,
+        style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+      ),
+      subtitle: Text(
+        userRef.displayName,
+        style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      trailing: userRef.phone != null && userRef.phone!.isNotEmpty
+          ? IconButton(
+              icon: Icon(Icons.phone, color: cs.primary),
+              onPressed: () => _makePhoneCall(context, userRef.phone),
+            )
+          : null,
     );
   }
 }
