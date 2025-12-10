@@ -4,6 +4,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../business/auth/entities/auth_response.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/mutations/mutations.dart';
+import 'api_service.dart';
 
 /// Service for handling authentication operations
 class AuthService {
@@ -114,6 +115,9 @@ class AuthService {
       //   ),
       // );
 
+      // Clear all user-specific caches
+      ApiService.instance.clearUserCaches();
+
       // Clear auth token from client
       _graphQLClient.clearAuthToken();
 
@@ -125,6 +129,7 @@ class AuthService {
         print('⚠️ Logout error (continuing anyway): $e');
       }
       // Clear token even if server logout fails
+      ApiService.instance.clearUserCaches();
       _graphQLClient.clearAuthToken();
     }
   }

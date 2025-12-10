@@ -4,6 +4,7 @@ import '../../core/utils/date_formatters.dart';
 import '../../core/session.dart';
 import '../../core/routes.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/olympic_season_service.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../core/theme/color_schemes.dart';
 import 'avatar_mini.dart';
@@ -23,7 +24,17 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
   bool _checkedIn = false;
   bool _registering = false;
 
+  /// Get fresh event from service if available, fallback to widget.event
+  Event get _event =>
+      OlympicSeasonService.instance.getEventById(widget.event.id) ??
+      widget.event;
+
   void _onServiceChange() {
+    _loadState();
+  }
+
+  void _onSeasonChange() {
+    if (mounted) setState(() {});
     _loadState();
   }
 
@@ -32,27 +43,37 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
     super.initState();
     _loadState();
     ApiService.instance.changes.addListener(_onServiceChange);
+    OlympicSeasonService.instance.addListener(_onSeasonChange);
   }
 
   @override
   void dispose() {
     ApiService.instance.changes.removeListener(_onServiceChange);
+    OlympicSeasonService.instance.removeListener(_onSeasonChange);
     super.dispose();
   }
 
   Future<void> _loadState() async {
-    final isReg = await ApiService.instance.isRegistered(
-      eventId: widget.event.id,
-      userId: kCurrentUserId,
+    final e = _event;
+
+    // Check from event's server data first
+    final isRegFromEvent = e.isUserRegistered(currentUserId);
+    final isInFromEvent = e.isUserCheckedIn(currentUserId);
+
+    // Also check local cache (in case we just registered and haven't refetched)
+    final isRegFromCache = await ApiService.instance.isRegistered(
+      eventId: e.id,
+      userId: currentUserId,
     );
-    final isIn = await ApiService.instance.isCheckedIn(
-      eventId: widget.event.id,
-      userId: kCurrentUserId,
+    final isInFromCache = await ApiService.instance.isCheckedIn(
+      eventId: e.id,
+      userId: currentUserId,
     );
+
     if (!mounted) return;
     setState(() {
-      _registered = isReg;
-      _checkedIn = isIn;
+      _registered = isRegFromEvent || isRegFromCache;
+      _checkedIn = isInFromEvent || isInFromCache;
     });
   }
 
@@ -62,7 +83,7 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
     try {
       await ApiService.instance.registerForEvent(
         eventId: widget.event.id,
-        userId: kCurrentUserId,
+        userId: currentUserId,
       );
       ApiService.instance.changes.value++;
       if (!mounted) return;
@@ -104,7 +125,7 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final e = widget.event;
+    final e = _event;
 
     return Material(
       color: kHAPrimary, // High Aspirations dark blue
@@ -193,8 +214,14 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                             ? (_registering ? null : _onRegister)
                             : (!_checkedIn ? _onCheckIn : null),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF2C3E5C),
+                          backgroundColor: _checkedIn
+                              ? Colors.grey.shade200
+                              : Colors.white,
+                          foregroundColor: _checkedIn
+                              ? Colors.grey.shade600
+                              : const Color(0xFF2C3E5C),
+                          disabledBackgroundColor: Colors.grey.shade200,
+                          disabledForegroundColor: Colors.grey.shade600,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
@@ -215,13 +242,28 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                                   ),
                                 ),
                               )
-                            : Text(
-                                !_registered
-                                    ? 'Register'
-                                    : (!_checkedIn ? 'Check-in' : 'Checked in'),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_checkedIn) ...[
+                                    Icon(
+                                      Icons.check_circle,
+                                      size: 16,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  Text(
+                                    !_registered
+                                        ? 'Register'
+                                        : (!_checkedIn
+                                              ? 'Check-in'
+                                              : 'Checked In'),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
@@ -243,8 +285,8 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                       child: _EventImage(src: e.imageUrl ?? ''),
                     ),
                   ),
-                  // Registered badge overlay
-                  if (_registered)
+                  // Status badge overlay (Registered or Arrived)
+                  if (_registered || _checkedIn)
                     Positioned(
                       bottom: 8,
                       left: 0,
@@ -256,7 +298,9 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: _checkedIn
+                                ? Colors.green.shade50
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(999),
                             boxShadow: [
                               BoxShadow(
@@ -269,16 +313,22 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.verified,
+                              Icon(
+                                _checkedIn
+                                    ? Icons.check_circle
+                                    : Icons.verified,
                                 size: 14,
-                                color: Color(0xFF2C3E5C),
+                                color: _checkedIn
+                                    ? Colors.green.shade700
+                                    : const Color(0xFF2C3E5C),
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Registered',
+                                _checkedIn ? 'Arrived' : 'Registered',
                                 style: t.labelSmall?.copyWith(
-                                  color: const Color(0xFF2C3E5C),
+                                  color: _checkedIn
+                                      ? Colors.green.shade700
+                                      : const Color(0xFF2C3E5C),
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.2,
                                 ),

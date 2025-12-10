@@ -34,14 +34,14 @@ class Event {
 
   factory Event.fromJson(Map<String, dynamic> json) {
     return Event(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       name: json['name'] as String,
       description: json['description'] as String?,
       eventDate: DateTime.parse(json['eventDate'] as String),
       location: json['location'] as String?,
       imageUrl: json['imageUrl'] as String?,
       eventType: EventType.fromJson(json['eventType'] as Map<String, dynamic>),
-      olympicSeasonId: json['olympicSeason']?['id'] as String?,
+      olympicSeasonId: json['olympicSeason']?['id']?.toString(),
       arrivedUsers:
           (json['arrivedUsers'] as List<dynamic>?)
               ?.map((e) => User.fromJson(e as Map<String, dynamic>))
@@ -83,4 +83,14 @@ class Event {
   int get attendeeCount => arrivedUsers.length; // Legacy compatibility
 
   bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
+
+  /// Check if a user is registered for this event
+  bool isUserRegistered(String userId) {
+    return registeredUsers.any((u) => u.id == userId);
+  }
+
+  /// Check if a user has checked in (arrived) at this event
+  bool isUserCheckedIn(String userId) {
+    return arrivedUsers.any((u) => u.id == userId);
+  }
 }

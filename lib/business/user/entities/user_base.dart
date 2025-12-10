@@ -6,8 +6,8 @@ class User {
 
   final String? firstName;
   final String? lastName;
-  final String email;
-  final String? phone; // ?
+  final String? email;
+  final String? phone;
   final String? image;
   final int? colorIndex;
 
@@ -15,7 +15,7 @@ class User {
 
   const User({
     required this.id,
-    required this.email,
+    this.email,
     this.firstName,
     this.lastName,
     this.phone,
@@ -51,8 +51,8 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] as String,
-      email: json['email'] as String,
+      id: json['id'].toString(),
+      email: json['email'] as String?,
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
       phone: json['phone'] as String?,

@@ -6,10 +6,11 @@ import '../../business/events/entities/event.dart';
 import '../../business/user/entities/user.dart';
 import '../../core/utils/date_formatters.dart';
 import '../../data/services/api_service.dart';
-import '../../core/session.dart'; // kCurrentUserId
+import '../../data/services/olympic_season_service.dart';
+import '../../core/session.dart';
 import '../widgets/button_long.dart';
 import '../widgets/button_long_outlined.dart';
-import '../widgets/avatar_mini.dart';
+import '../widgets/avatar.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final Event event;
@@ -28,18 +29,34 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   bool _checkingIn = false;
   bool _unregistering = false;
 
+  /// Get fresh event from service if available, fallback to widget.event
+  Event get _event =>
+      OlympicSeasonService.instance.getEventById(widget.event.id) ??
+      widget.event;
+
   @override
   void initState() {
     super.initState();
+    _logRegisteredUsers();
     _loadState();
-    ApiService.instance.changes.addListener(
-      _onServiceChange,
-    ); // listen for global updates
+    ApiService.instance.changes.addListener(_onServiceChange);
+    OlympicSeasonService.instance.addListener(_onSeasonChange);
+  }
+
+  void _logRegisteredUsers() {
+    print('📋 Event: ${_event.name}');
+    print('📋 Registered Users (${_event.registeredUsers.length}):');
+    for (final user in _event.registeredUsers) {
+      print(
+        '   - ID: ${user.id}, Name: ${user.firstName} ${user.lastName}, Image: ${user.image}',
+      );
+    }
   }
 
   @override
   void dispose() {
     ApiService.instance.changes.removeListener(_onServiceChange);
+    OlympicSeasonService.instance.removeListener(_onSeasonChange);
     super.dispose();
   }
 
@@ -47,19 +64,34 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     _loadState(); // pull fresh flags whenever service notifies
   }
 
+  void _onSeasonChange() {
+    // Refresh when Olympic Season data updates (after registration/check-in)
+    if (mounted) setState(() {});
+    _loadState();
+  }
+
   Future<void> _loadState() async {
-    final isReg = await ApiService.instance.isRegistered(
-      eventId: widget.event.id,
-      userId: kCurrentUserId,
+    final e = _event;
+
+    // Check from event's server data first
+    final isRegFromEvent = e.isUserRegistered(currentUserId);
+    final isInFromEvent = e.isUserCheckedIn(currentUserId);
+
+    // Also check local cache (in case we just registered and haven't refetched)
+    final isRegFromCache = await ApiService.instance.isRegistered(
+      eventId: e.id,
+      userId: currentUserId,
     );
-    final isIn = await ApiService.instance.isCheckedIn(
-      eventId: widget.event.id,
-      userId: kCurrentUserId,
+    final isInFromCache = await ApiService.instance.isCheckedIn(
+      eventId: e.id,
+      userId: currentUserId,
     );
+
     if (!mounted) return;
     setState(() {
-      _registered = isReg;
-      _checkedIn = isIn;
+      // User is registered if either source says so
+      _registered = isRegFromEvent || isRegFromCache;
+      _checkedIn = isInFromEvent || isInFromCache;
       _loadingStatus = false;
     });
   }
@@ -70,7 +102,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     try {
       await ApiService.instance.registerForEvent(
         eventId: widget.event.id,
-        userId: kCurrentUserId,
+        userId: currentUserId,
       );
       ApiService.instance.changes.value++; // broadcast
       if (!mounted) return;
@@ -118,7 +150,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     try {
       await ApiService.instance.unregister(
         eventId: widget.event.id,
-        userId: kCurrentUserId,
+        userId: currentUserId,
       );
       ApiService.instance.changes.value++; // broadcast
       if (!mounted) return;
@@ -146,7 +178,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final e = widget.event;
+    final e = _event;
 
     // Show all attendees in a grid
     final List<User> allAttendees = e.registeredUsers;
@@ -180,9 +212,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (_registered) ...[
+                  if (_registered || _checkedIn) ...[
                     const SizedBox(width: 8),
-                    const _RegisteredBadge(),
+                    _StatusBadge(isCheckedIn: _checkedIn),
                   ],
                 ],
               ),
@@ -234,11 +266,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 // Primary: Check-in
                 ButtonLong(
                   label: _checkedIn
-                      ? 'Checked in'
+                      ? 'Checked In'
                       : (_checkingIn ? 'Checking in…' : 'Check-in'),
-                  icon: Icons.login,
+                  icon: _checkedIn ? Icons.check_circle : Icons.login,
                   isLoading: _checkingIn,
                   onPressed: (_checkingIn || _checkedIn) ? null : _onCheckIn,
+                  style: _checkedIn
+                      ? FilledButton.styleFrom(
+                          backgroundColor: Colors.grey.shade200,
+                          foregroundColor: Colors.grey.shade600,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 // Secondary: Cancel registration
@@ -257,30 +298,42 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 }
 
-class _RegisteredBadge extends StatelessWidget {
-  const _RegisteredBadge();
+class _StatusBadge extends StatelessWidget {
+  final bool isCheckedIn;
+  const _StatusBadge({required this.isCheckedIn});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
 
+    // Use green for arrived, primary for registered
+    final bgColor = isCheckedIn ? Colors.green.shade50 : cs.primaryContainer;
+    final fgColor = isCheckedIn ? Colors.green.shade700 : cs.onPrimaryContainer;
+    final borderColor = isCheckedIn
+        ? Colors.green.shade200
+        : cs.primary.withOpacity(0.25);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: cs.primaryContainer,
+        color: bgColor,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.primary.withOpacity(0.25)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified, size: 14, color: cs.onPrimaryContainer),
+          Icon(
+            isCheckedIn ? Icons.check_circle : Icons.verified,
+            size: 14,
+            color: fgColor,
+          ),
           const SizedBox(width: 4),
           Text(
-            'Registered',
+            isCheckedIn ? 'Arrived' : 'Registered',
             style: t.labelSmall?.copyWith(
-              color: cs.onPrimaryContainer,
+              color: fgColor,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
             ),
@@ -413,7 +466,12 @@ class _AttendeesGridState extends State<_AttendeesGrid> {
           itemCount: attendeesToShow.length,
           itemBuilder: (context, index) {
             final user = attendeesToShow[index];
-            return AvatarMini(imageUrl: user.image ?? '', size: 48);
+            return Avatar(
+              firstName: user.firstName,
+              lastName: user.lastName,
+              image: user.image,
+              size: 48,
+            );
           },
         ),
         if (widget.attendees.length > _maxInitial) ...[

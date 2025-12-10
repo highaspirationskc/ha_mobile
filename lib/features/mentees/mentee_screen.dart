@@ -69,10 +69,11 @@ class _MenteeScreenState extends State<MenteeScreen> {
             const SizedBox(height: 8),
 
             // Email
-            Text(
-              widget.mentee.email,
-              style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
-            ),
+            if (widget.mentee.email != null)
+              Text(
+                widget.mentee.email!,
+                style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
+              ),
             const SizedBox(height: 24),
 
             // Action Buttons Row

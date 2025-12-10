@@ -3,10 +3,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../core/session.dart'; // <-- shared user id
+import '../../core/session.dart';
 import '../../core/utils/date_formatters.dart';
-import '../../data/mock/mock_data.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/olympic_season_service.dart';
 import '../../business/events/entities/event.dart';
 import '../widgets/button_long.dart';
 import '../widgets/button_long_outlined.dart';
@@ -33,26 +33,28 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
     super.dispose();
   }
 
-  Event? _eventFromPayload(String raw) {
+  /// Extract event ID from QR code payload
+  /// Returns null if invalid format
+  String? _eventIdFromPayload(String raw) {
     final s = raw.trim();
     if (s.isEmpty) return null;
 
-    // deep link: ha://checkin?eventId=evt_3
+    // deep link: ha://checkin?eventId=123
     if (s.contains('eventId=')) {
       final uri = Uri.tryParse(s);
       final id = uri?.queryParameters['eventId'];
-      if (id != null) {
-        try {
-          return mockEvents.firstWhere((e) => e.id == id);
-        } catch (_) {}
-      }
+      if (id != null && id.isNotEmpty) return id;
     }
 
-    // plain id: evt_3
-    try {
-      return mockEvents.firstWhere((e) => e.id == s);
-    } catch (_) {}
+    // plain id: 123 or evt_3
+    if (s.isNotEmpty) return s;
+
     return null;
+  }
+
+  /// Try to find event in cached data for display (optional)
+  Event? _findEvent(String eventId) {
+    return OlympicSeasonService.instance.getEventById(eventId);
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
@@ -60,8 +62,8 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
     final raw = capture.barcodes.firstOrNull?.rawValue;
     if (raw == null) return;
 
-    final evt = _eventFromPayload(raw);
-    if (evt == null) {
+    final eventId = _eventIdFromPayload(raw);
+    if (eventId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -73,12 +75,15 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
       return;
     }
 
-    await _openConfirm(evt);
+    await _openConfirm(eventId);
   }
 
-  Future<void> _openConfirm(Event evt) async {
+  Future<void> _openConfirm(String eventId) async {
     setState(() => _handling = true);
     _controller.stop();
+
+    // Try to find event details in cached data for display
+    final event = _findEvent(eventId);
 
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -89,7 +94,7 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _ConfirmSheet(event: evt),
+      builder: (_) => _ConfirmSheet(eventId: eventId, event: event),
     );
 
     if (!mounted) return;
@@ -102,19 +107,30 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
     }
   }
 
-  // Mock scan button (useful on web/simulator)
-  Future<void> _mockScan() async {
+  // Test scan button (useful on web/simulator)
+  Future<void> _testScan() async {
+    print('🔍 Test scan triggered');
+    print('   mockEventId from widget: ${widget.mockEventId}');
+
+    final events = OlympicSeasonService.instance.events;
+    print('   Available events: ${events.length}');
+
     final id =
-        widget.mockEventId ??
-        (mockEvents.isNotEmpty ? mockEvents.first.id : null);
-    if (id == null) return;
-    final evt =
-        _eventFromPayload(id) ??
-        mockEvents.firstWhere(
-          (e) => e.id == id,
-          orElse: () => mockEvents.first,
+        widget.mockEventId ?? (events.isNotEmpty ? events.first.id : null);
+    print('   Using event ID: $id');
+
+    if (id == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No events available'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-    await _openConfirm(evt);
+      }
+      return;
+    }
+    await _openConfirm(id);
   }
 
   @override
@@ -175,9 +191,9 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
               heroTag: 'mockScan',
               backgroundColor: Colors.white.withOpacity(0.92),
               foregroundColor: Colors.black87,
-              onPressed: _handling ? null : _mockScan,
+              onPressed: _handling ? null : _testScan,
               icon: const Icon(Icons.qr_code_2),
-              label: const Text('Mock scan'),
+              label: const Text('Test scan'),
             ),
           ),
         ],
@@ -204,8 +220,9 @@ class _WebCameraUnavailable extends StatelessWidget {
 }
 
 class _ConfirmSheet extends StatefulWidget {
-  final Event event;
-  const _ConfirmSheet({required this.event});
+  final String eventId;
+  final Event? event; // Optional - for display purposes only
+  const _ConfirmSheet({required this.eventId, this.event});
 
   @override
   State<_ConfirmSheet> createState() => _ConfirmSheetState();
@@ -219,27 +236,15 @@ class _ConfirmSheetState extends State<_ConfirmSheet> {
     setState(() => _submitting = true);
 
     try {
-      // 1) Ensure the user is registered (handles stale/race conditions)
-      final isReg = await ApiService.instance.isRegistered(
-        eventId: widget.event.id,
-        userId: kCurrentUserId,
-      );
-      if (!isReg) {
-        await ApiService.instance.registerForEvent(
-          eventId: widget.event.id,
-          userId: kCurrentUserId,
-        );
-      }
-
-      // 2) Perform check-in
+      // Perform check-in directly (server handles registration if needed)
       await ApiService.instance.checkInForEvent(
-        eventId: widget.event.id,
-        userId: kCurrentUserId,
+        eventId: widget.eventId,
+        userId: currentUserId,
       );
 
       if (!mounted) return;
 
-      // 3) Notify listeners and close with success
+      // Notify listeners and close with success
       ApiService.instance.changes.value++;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -264,54 +269,72 @@ class _ConfirmSheetState extends State<_ConfirmSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final e = widget.event;
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+    final e = widget.event;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Image on top
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: _SheetImage(src: e.imageUrl ?? ''),
+          // Show event details if available, otherwise show simple check-in
+          if (e != null) ...[
+            // Image on top
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: _SheetImage(src: e.imageUrl ?? ''),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          // Event details below
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                e.name,
-                style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 18,
-                    color: cs.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '${formatLongDate(e.eventDate)}  •  ${formatTime(e.eventDate)}',
-                      style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                      overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 16),
+            // Event details below
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  e.name,
+                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 18,
+                      color: cs.primary,
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${formatLongDate(e.eventDate)}  •  ${formatTime(e.eventDate)}',
+                        style: t.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ] else ...[
+            // Simple check-in confirmation without event details
+            Icon(Icons.qr_code_scanner, size: 64, color: cs.primary),
+            const SizedBox(height: 16),
+            Text(
+              'Ready to Check In',
+              style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap Complete to check in to this event',
+              style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
           const SizedBox(height: 20),
           ButtonLong(
             label: _submitting ? 'Completing…' : 'Complete',

@@ -116,7 +116,7 @@ class ListTileMessage extends StatelessWidget {
     final f = u.firstName?.trim() ?? '';
     final l = u.lastName?.trim() ?? '';
     final both = '$f $l'.trim();
-    return both.isEmpty ? (u.email) : both;
+    return both.isEmpty ? (u.email ?? '') : both;
   }
 
   /// Show the purple "mentor" chip iff:

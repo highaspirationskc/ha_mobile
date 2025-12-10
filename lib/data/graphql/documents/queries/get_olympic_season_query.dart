@@ -19,16 +19,11 @@ const String getOlympicSeasonQuery = r'''
         eventType {
           id
           name
-          category
-          pointValue
-          createdAt
-          updatedAt
         }
         registeredUsers {
           id
           firstName
           lastName
-          email
           avatarUrl
           role
         }
@@ -36,7 +31,6 @@ const String getOlympicSeasonQuery = r'''
           id
           firstName
           lastName
-          email
           avatarUrl
           role
         }

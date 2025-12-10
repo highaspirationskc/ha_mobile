@@ -112,16 +112,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // Name
               Text(
-                u.displayName.isNotEmpty ? u.displayName : u.email,
+                u.displayName.isNotEmpty ? u.displayName : (u.email ?? ''),
                 style: t.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
 
               // Email
-              Text(
-                u.email,
-                style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
-              ),
+              if (u.email != null)
+                Text(
+                  u.email!,
+                  style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
+                ),
 
               // Points (only for mentees)
               if (currentUserKind.value == CurrentUserKind.mentee) ...[

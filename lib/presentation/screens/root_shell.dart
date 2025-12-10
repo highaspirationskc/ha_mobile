@@ -147,8 +147,9 @@ class _RootShellState extends State<RootShell> {
             settings: const RouteSettings(name: AppRoutes.pastScoops),
           );
         case AppRoutes.checkInScanner:
+          final eventId = settings.arguments as String?;
           return MaterialPageRoute(
-            builder: (_) => const CheckInScannerScreen(),
+            builder: (_) => CheckInScannerScreen(mockEventId: eventId),
             settings: const RouteSettings(name: AppRoutes.checkInScanner),
           );
         case AppRoutes.notificationsRoot:

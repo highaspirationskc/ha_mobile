@@ -21,7 +21,7 @@ class OlympicSeasonService extends ChangeNotifier {
   List<Event> get events => _events;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get hasData => _currentSeason != null;
+  bool get hasData => _currentSeason != null || _events.isNotEmpty;
 
   /// Check if cache is still valid
   bool get _isCacheValid {
@@ -29,10 +29,11 @@ class OlympicSeasonService extends ChangeNotifier {
     return DateTime.now().difference(_lastFetch!) < _cacheDuration;
   }
 
-  /// Fetch current Olympic Season data (with caching)
+  /// Fetch current Olympic Season data with events (with caching)
+  /// Uses olympicSeason query with current year filter
   Future<void> fetchCurrentSeason({bool forceRefresh = false}) async {
     // Return cached data if valid and not forcing refresh
-    if (!forceRefresh && _isCacheValid && _currentSeason != null) {
+    if (!forceRefresh && _isCacheValid && _events.isNotEmpty) {
       if (kDebugMode) {
         print('📦 Using cached Olympic Season data');
       }
@@ -45,24 +46,23 @@ class OlympicSeasonService extends ChangeNotifier {
 
     try {
       if (kDebugMode) {
-        print('🔄 Fetching current Olympic Season from API...');
+        print('🔄 Fetching Olympic Season with events from API...');
       }
 
-      // Fetch current season (no input means current season)
+      // Fetch season with events (defaults to current year)
       final season = await ApiService.instance.getOlympicSeason();
-
       _currentSeason = season;
       _events = season.events;
+
       _lastFetch = DateTime.now();
       _error = null;
 
       if (kDebugMode) {
-        print(
-          '✅ Fetched ${season.name} season with ${season.events.length} events',
-        );
+        print('✅ Fetched ${season.name} season with ${_events.length} events');
       }
     } catch (e) {
       _error = e.toString();
+      _events = [];
       if (kDebugMode) {
         print('❌ Error fetching Olympic Season: $e');
       }
@@ -86,17 +86,31 @@ class OlympicSeasonService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Get the next Saturday event
+  /// Get the next Saturday event (this Saturday or next)
   Event? getNextSaturdayEvent() {
     final now = DateTime.now();
+
+    // Find the next Saturday (including today if it's Saturday)
+    final daysUntilSaturday = (DateTime.saturday - now.weekday) % 7;
+    final thisSaturday = DateTime(
+      now.year,
+      now.month,
+      now.day + daysUntilSaturday,
+    );
+
+    // Find events on this Saturday
     final saturdayEvents = _events.where((e) {
-      return e.eventDate.isAfter(now) &&
-          e.eventDate.weekday == DateTime.saturday;
+      final eventDay = DateTime(
+        e.eventDate.year,
+        e.eventDate.month,
+        e.eventDate.day,
+      );
+      return eventDay.isAtSameMomentAs(thisSaturday);
     }).toList();
 
     if (saturdayEvents.isEmpty) return null;
 
-    // Sort by date and return the nearest one
+    // Sort by time and return the first one
     saturdayEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
     return saturdayEvents.first;
   }
@@ -107,5 +121,14 @@ class OlympicSeasonService extends ChangeNotifier {
     final upcoming = _events.where((e) => e.eventDate.isAfter(now)).toList();
     upcoming.sort((a, b) => a.eventDate.compareTo(b.eventDate));
     return upcoming;
+  }
+
+  /// Get an event by ID (refreshed data with registration info)
+  Event? getEventById(String eventId) {
+    try {
+      return _events.firstWhere((e) => e.id == eventId);
+    } catch (_) {
+      return null;
+    }
   }
 }

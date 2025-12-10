@@ -133,7 +133,7 @@ class MessageScreen extends StatelessWidget {
     final firstName = user.firstName?.trim() ?? '';
     final lastName = user.lastName?.trim() ?? '';
     final fullName = '$firstName $lastName'.trim();
-    return fullName.isEmpty ? user.email : fullName;
+    return fullName.isEmpty ? (user.email ?? '') : fullName;
   }
 
   bool _isFromMyMentor(User author) {

@@ -16,12 +16,13 @@ import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
 import '../../business/events/entities/event.dart';
-import '../../business/events/entities/event_type.dart';
 import '../../data/mock/mock_data.dart';
 import '../mock/mock_leaderboard.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/queries/queries.dart';
 import '../graphql/documents/mutations/update_user_mutation.dart';
+import '../graphql/documents/mutations/event_mutations.dart';
+import 'olympic_season_service.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, and guardians
 class CurrentUserData {
@@ -69,21 +70,83 @@ class ApiService {
     };
   }
 
+  /// Clear all user-specific caches (call on logout)
+  void clearUserCaches() {
+    if (kDebugMode) {
+      print('🧹 API: Clearing user caches');
+    }
+    _registrations.clear();
+    _checkins.clear();
+    _communityServices.clear();
+    _pulses.clear();
+    _cachedEvents = null;
+    _eventsLastFetched = null;
+    changes.value++; // notify listeners
+  }
+
+  /// Register for an event using GraphQL mutation
   Future<void> registerForEvent({
     required String eventId,
     required String userId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 900));
-    final set = _registrations.putIfAbsent(userId, () => <String>{});
-    set.add(eventId);
-    changes.value++; // notify listeners
+    if (kDebugMode) {
+      print('📝 API: Registering for event: $eventId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(registerForEventMutation),
+          variables: {
+            'input': {'eventId': eventId},
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error registering: ${result.exception}');
+        }
+        throw Exception('Failed to register: ${result.exception}');
+      }
+
+      final registerData = result.data?['register'] as Map<String, dynamic>?;
+      final errors = registerData?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception(errors.join(', '));
+      }
+
+      final eventLog = registerData?['eventLog'] as Map<String, dynamic>?;
+      if (kDebugMode) {
+        print('✅ API: Registered successfully');
+        if (eventLog != null) {
+          print('   Event log ID: ${eventLog['id']}');
+          print('   Points awarded: ${eventLog['pointsAwarded']}');
+        }
+      }
+
+      // Update local cache
+      final set = _registrations.putIfAbsent(userId, () => <String>{});
+      set.add(eventId);
+
+      // Refetch events to update registeredUsers lists
+      await _refetchEvents();
+
+      changes.value++; // notify listeners
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception registering for event: $e');
+      }
+      rethrow;
+    }
   }
 
   Future<bool> isRegistered({
     required String eventId,
     required String userId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 200));
+    // Check local cache (updated after successful register/unregister)
     final set = _registrations[userId];
     return set != null && set.contains(eventId);
   }
@@ -92,36 +155,112 @@ class ApiService {
     required String eventId,
     required String userId,
   }) async {
+    // TODO: Add GraphQL mutation for unregister when available
     await Future.delayed(const Duration(milliseconds: 400));
     _registrations[userId]?.remove(eventId);
     _checkins[userId]?.remove(eventId);
     changes.value++; // notify listeners
   }
 
+  /// Check in to an event using GraphQL mutation
   Future<void> checkInForEvent({
     required String eventId,
     required String userId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 700));
-    final isReg = _registrations[userId]?.contains(eventId) ?? false;
-    if (!isReg) throw Exception('You must register before checking in.');
-    final set = _checkins.putIfAbsent(userId, () => <String>{});
-    set.add(eventId);
     if (kDebugMode) {
-      print('checkInForEvent: $userId checked into $eventId');
-      print('Total check-ins for $userId: ${set.length}');
+      print('✅ API: Checking in to event: $eventId');
     }
-    changes.value++; // notify listeners
+
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(checkInToEventMutation),
+          variables: {
+            'input': {'eventId': eventId},
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error checking in: ${result.exception}');
+        }
+        throw Exception('Failed to check in: ${result.exception}');
+      }
+
+      final checkInData = result.data?['checkIn'] as Map<String, dynamic>?;
+      final errors = checkInData?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception(errors.join(', '));
+      }
+
+      final eventLog = checkInData?['eventLog'] as Map<String, dynamic>?;
+      if (kDebugMode) {
+        print('✅ API: Checked in successfully');
+        if (eventLog != null) {
+          print('   Event log ID: ${eventLog['id']}');
+          print('   Log type: ${eventLog['logType']}');
+          print('   Points awarded: ${eventLog['pointsAwarded']}');
+        }
+      }
+
+      // Update local cache
+      final set = _checkins.putIfAbsent(userId, () => <String>{});
+      set.add(eventId);
+
+      // Refetch events to update arrivedUsers lists
+      await _refetchEvents();
+
+      changes.value++; // notify listeners
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception checking in: $e');
+      }
+      rethrow;
+    }
   }
 
   Future<bool> isCheckedIn({
     required String eventId,
     required String userId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 150));
+    // Check local cache (updated after successful check-in)
     final set = _checkins[userId];
     return set != null && set.contains(eventId);
   }
+
+  /// Refetch events from server to get updated registeredUsers/arrivedUsers
+  Future<void> _refetchEvents() async {
+    if (kDebugMode) {
+      print('🔄 API: Refetching events after registration/check-in...');
+    }
+    try {
+      // Force refresh the Olympic Season to get updated user lists
+      await OlympicSeasonService.instance.refresh();
+      if (kDebugMode) {
+        print('✅ API: Events refetched successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ API: Failed to refetch events: $e');
+      }
+      // Don't rethrow - the registration/check-in was successful
+    }
+  }
+
+  /// Cached events list (populated by getOlympicSeason)
+  List<Event>? _cachedEvents;
+  DateTime? _eventsLastFetched;
+
+  /// Get cached events (call getOlympicSeason first to populate)
+  List<Event> get cachedEvents => _cachedEvents ?? [];
+
+  /// Check if events cache is valid
+  bool get hasValidEventsCache =>
+      _cachedEvents != null &&
+      _eventsLastFetched != null &&
+      DateTime.now().difference(_eventsLastFetched!).inMinutes < 5;
 
   /// Creates a new community service entry for a user
   Future<CommunityService> createCommunityService({
@@ -715,26 +854,22 @@ class ApiService {
   }
 
   /// Gets the current Olympic Season with all events
-  /// Pass input to get a specific season, or leave null for current
+  /// Defaults to current year if no year is provided
   Future<OlympicSeason> getOlympicSeason({String? name, int? year}) async {
+    // Default to current year
+    final queryYear = year ?? DateTime.now().year;
+
     if (kDebugMode) {
-      print('🏅 Fetching Olympic Season...');
+      print('🏅 Fetching Olympic Season for year $queryYear...');
     }
 
     try {
-      final Map<String, dynamic>? variables = (name != null || year != null)
-          ? {
-              'input': {
-                if (name != null) 'name': name,
-                if (year != null) 'year': year,
-              },
-            }
-          : null;
-
       final result = await _graphQLClient.client.query(
         QueryOptions(
           document: gql(getOlympicSeasonQuery),
-          variables: variables ?? {},
+          variables: {
+            'input': {if (name != null) 'name': name, 'year': queryYear},
+          },
           fetchPolicy: FetchPolicy.networkOnly,
         ),
       );
@@ -752,78 +887,29 @@ class ApiService {
       }
 
       if (result.hasException) {
-        if (kDebugMode) {
-          print('⚠️ Error fetching Olympic Season, using mock data');
-        }
-        // Fall back to current season mock data
-        return getCurrentSeason();
+        throw Exception('GraphQL error: ${result.exception}');
       }
 
       final seasonData = result.data?['olympicSeason'] as Map<String, dynamic>?;
       if (seasonData == null) {
-        if (kDebugMode) {
-          print('⚠️ No Olympic Season data in response, using mock data');
-        }
-        return getCurrentSeason();
+        throw Exception('No Olympic Season data in response');
       }
 
-      // Parse events
+      // Parse events from the season
       final eventsData = seasonData['events'] as List<dynamic>? ?? [];
       final events = eventsData.map((json) {
-        final eventTypeData = json['eventType'] as Map<String, dynamic>;
-        final eventType = EventType.fromJson(eventTypeData);
-
-        final registeredUsersData =
-            json['registeredUsers'] as List<dynamic>? ?? [];
-        final registeredUsers = registeredUsersData.map((u) {
-          final userData = u as Map<String, dynamic>;
-          // Map API fields to our User model fields
-          return User(
-            id: userData['id'].toString(),
-            email: userData['email'] as String,
-            firstName: userData['firstName'] as String?,
-            lastName: userData['lastName'] as String?,
-            image: userData['avatarUrl'] as String?,
-            roles: userData['role'] != null
-                ? {UserRole.fromString(userData['role'] as String)}
-                : {},
-          );
-        }).toList();
-
-        final arrivedUsersData = json['arrivedUsers'] as List<dynamic>? ?? [];
-        final arrivedUsers = arrivedUsersData.map((u) {
-          final userData = u as Map<String, dynamic>;
-          // Map API fields to our User model fields
-          return User(
-            id: userData['id'].toString(),
-            email: userData['email'] as String,
-            firstName: userData['firstName'] as String?,
-            lastName: userData['lastName'] as String?,
-            image: userData['avatarUrl'] as String?,
-            roles: userData['role'] != null
-                ? {UserRole.fromString(userData['role'] as String)}
-                : {},
-          );
-        }).toList();
-
-        return Event(
-          id: json['id'] as String,
-          name: json['name'] as String,
-          description: json['description'] as String?,
-          eventDate: DateTime.parse(json['eventDate'] as String),
-          location: json['location'] as String?,
-          imageUrl: json['imageUrl'] as String?,
-          eventType: eventType,
-          olympicSeasonId: seasonData['id'] as String,
-          registeredUsers: registeredUsers,
-          arrivedUsers: arrivedUsers,
-          createdAt: DateTime.parse(json['createdAt'] as String),
-          updatedAt: DateTime.parse(json['updatedAt'] as String),
-        );
+        return Event.fromJson(json as Map<String, dynamic>);
       }).toList();
 
+      // Sort events by date
+      events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+
+      // Cache the events
+      _cachedEvents = events;
+      _eventsLastFetched = DateTime.now();
+
       final season = OlympicSeason(
-        id: seasonData['id'] as String,
+        id: seasonData['id'].toString(),
         name: seasonData['name'] as String,
         startMonth: seasonData['startMonth'] as int,
         startDay: seasonData['startDay'] as int,
@@ -842,10 +928,8 @@ class ApiService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ Exception fetching Olympic Season: $e');
-        print('   Using mock data as fallback');
       }
-      // On any error, return mock data
-      return getCurrentSeason();
+      rethrow;
     }
   }
 
