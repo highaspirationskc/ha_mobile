@@ -34,31 +34,24 @@ class HANavBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: Material(
             color: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                navigationBarTheme: NavigationBarThemeData(
-                  indicatorColor: Colors.transparent,
-                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                    return const TextStyle(fontSize: 0);
-                  }),
-                  height: 60,
-                ),
-              ),
-              child: NavigationBar(
-                selectedIndex: index,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                onDestinationSelected: onChanged,
-                destinations: [
-                  for (final t in tabs)
-                    NavigationDestination(
-                      icon: t.$1,
-                      selectedIcon: t.$2,
-                      label: '',
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                for (int i = 0; i < tabs.length; i++)
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => onChanged(i),
+                      customBorder: const CircleBorder(),
+                      child: SizedBox(
+                        height: 60,
+                        child: Center(
+                          child: i == index ? tabs[i].$2 : tabs[i].$1,
+                        ),
+                      ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ),
