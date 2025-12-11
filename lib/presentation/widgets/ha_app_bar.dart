@@ -19,7 +19,6 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final isTeamRoute = title == 'Leaderboard' || title == 'Team';
 
     return AppBar(
@@ -40,7 +39,7 @@ class HAAppBar extends StatelessWidget implements PreferredSizeWidget {
           : Padding(
               padding: const EdgeInsets.all(8.0),
               child: Image.asset(
-                '/logos/HA_logo_darkblue.png',
+                'assets/logos/HA_logo_darkblue.png',
                 height: 32,
                 fit: BoxFit.contain,
               ),
