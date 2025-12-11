@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+import 'package:webview_flutter/webview_flutter.dart';
+
+// Conditional import for iframe support
+import 'video_player_iframe_stub.dart'
+    if (dart.library.html) 'video_player_iframe_web.dart'
+    as iframe_impl;
 
 /// Reusable in-app video player.
 /// Supports YouTube and iframe-based video embeds (Cloudflare Stream, Vimeo, etc.)
+/// Works on both web and mobile platforms.
 class VideoPlayer extends StatefulWidget {
   /// Provide either a full video URL, embed URL, or YouTube video ID.
   final String youtubeIdOrUrl;
@@ -112,8 +116,10 @@ class VideoPlayer extends StatefulWidget {
 
 class _VideoPlayerState extends State<VideoPlayer> {
   YoutubePlayerController? _yt;
+  WebViewController? _webViewController;
   String? _iframeViewType;
   bool _isIframeEmbed = false;
+  bool _useWebView = false;
 
   @override
   void initState() {
@@ -145,33 +151,57 @@ class _VideoPlayerState extends State<VideoPlayer> {
       }
     }
 
-    // For non-YouTube URLs (Cloudflare Stream, etc.), use iframe embed
+    // For non-YouTube URLs (Cloudflare Stream, etc.)
     if (VideoPlayer.isIframeUrl(url) || url.startsWith('http')) {
       if (kDebugMode) {
-        print('🎬 VideoPlayer: Using iframe embed for: $url');
+        print('🎬 VideoPlayer: Setting up video embed for: $url');
       }
-      _isIframeEmbed = true;
-      _iframeViewType = 'video-iframe-${url.hashCode}';
-      _registerIframeView(url);
+
+      // On web, use iframe
+      if (kIsWeb) {
+        _isIframeEmbed = true;
+        _iframeViewType = 'video-iframe-${url.hashCode}';
+        iframe_impl.registerIframeView(_iframeViewType!, url);
+      } else {
+        // On mobile, use WebView
+        _useWebView = true;
+        _initWebView(url);
+      }
     }
   }
 
-  void _registerIframeView(String url) {
-    // Register the iframe view for Flutter Web
-    // ignore: undefined_prefixed_name
-    ui_web.platformViewRegistry.registerViewFactory(_iframeViewType!, (
-      int viewId,
-    ) {
-      final iframe = html.IFrameElement()
-        ..src = url
-        ..style.border = 'none'
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..allow =
-            'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen'
-        ..allowFullscreen = true;
-      return iframe;
-    });
+  void _initWebView(String url) {
+    if (kDebugMode) {
+      print('🎬 VideoPlayer: Initializing WebView for: $url');
+    }
+
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (int progress) {
+            if (kDebugMode && progress % 25 == 0) {
+              print('🎬 VideoPlayer: WebView loading progress: $progress%');
+            }
+          },
+          onPageStarted: (String url) {
+            if (kDebugMode) {
+              print('🎬 VideoPlayer: Page started loading: $url');
+            }
+          },
+          onPageFinished: (String url) {
+            if (kDebugMode) {
+              print('🎬 VideoPlayer: Page finished loading: $url');
+            }
+          },
+          onWebResourceError: (WebResourceError error) {
+            if (kDebugMode) {
+              print('🎬 VideoPlayer: WebView error: ${error.description}');
+            }
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(url));
   }
 
   @override
@@ -184,7 +214,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // YouTube player
+    // YouTube player (works on both web and mobile)
     if (_yt != null) {
       return AspectRatio(
         aspectRatio: 16 / 9,
@@ -192,11 +222,19 @@ class _VideoPlayerState extends State<VideoPlayer> {
       );
     }
 
-    // Iframe embed (Cloudflare Stream, Vimeo, etc.)
-    if (_isIframeEmbed && _iframeViewType != null) {
+    // Web: Iframe embed (Cloudflare Stream, Vimeo, etc.)
+    if (_isIframeEmbed && _iframeViewType != null && kIsWeb) {
+      final iframeWidget = iframe_impl.buildIframeWidget(_iframeViewType!);
+      if (iframeWidget != null) {
+        return AspectRatio(aspectRatio: 16 / 9, child: iframeWidget);
+      }
+    }
+
+    // Mobile: WebView for iframe embeds
+    if (_useWebView && _webViewController != null) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: HtmlElementView(viewType: _iframeViewType!),
+        child: WebViewWidget(controller: _webViewController!),
       );
     }
 
@@ -204,7 +242,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Container(
-        color: cs.surfaceVariant,
+        color: cs.surfaceContainerHighest,
         alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
