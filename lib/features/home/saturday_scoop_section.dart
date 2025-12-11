@@ -1,39 +1,48 @@
 import 'package:flutter/material.dart';
 import '../../business/scoops/entities/scoop.dart';
-import '../../data/mock/mock_data.dart';
+import '../../data/services/api_service.dart';
 import '../../core/routes.dart';
 import '../../presentation/widgets/list_tile_scoop.dart';
 
-class SaturdayScoopSection extends StatelessWidget {
+class SaturdayScoopSection extends StatefulWidget {
   const SaturdayScoopSection({super.key});
 
-  /// Find the Saturday scoop for the current week
-  /// (posted within the last 7 days)
-  Scoop? _getThisWeeksSaturdayScoop(List<Scoop> scoops) {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
+  @override
+  State<SaturdayScoopSection> createState() => _SaturdayScoopSectionState();
+}
 
-    // Find scoops posted in the last 7 days
-    final recentScoops = scoops.where((scoop) {
-      return scoop.datePosted.isAfter(weekAgo) &&
-          scoop.datePosted.isBefore(now.add(const Duration(days: 1)));
-    }).toList();
+class _SaturdayScoopSectionState extends State<SaturdayScoopSection> {
+  Scoop? _scoop;
+  bool _isLoading = true;
 
-    if (recentScoops.isEmpty) return null;
+  @override
+  void initState() {
+    super.initState();
+    _loadScoop();
+  }
 
-    // Sort by date and return the most recent one
-    recentScoops.sort((a, b) => b.datePosted.compareTo(a.datePosted));
-    return recentScoops.first;
+  Future<void> _loadScoop() async {
+    final scoop = await ApiService.instance.getThisWeeksScoop();
+    if (mounted) {
+      setState(() {
+        _scoop = scoop;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final scoop = _getThisWeeksSaturdayScoop(mockScoops);
     final textTheme = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
+    // Still loading
+    if (_isLoading) {
+      return const SizedBox.shrink();
+    }
+
     // If no Saturday scoop for this week, return empty widget
-    if (scoop == null) {
+    if (_scoop == null) {
       return const SizedBox.shrink();
     }
 
@@ -49,11 +58,11 @@ class SaturdayScoopSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         ListTileScoop(
-          scoop: scoop,
+          scoop: _scoop!,
           onTap: () {
             Navigator.of(
               context,
-            ).pushNamed(AppRoutes.scoopDetail, arguments: scoop);
+            ).pushNamed(AppRoutes.scoopDetail, arguments: _scoop);
           },
         ),
       ],

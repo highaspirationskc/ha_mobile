@@ -498,7 +498,7 @@ final List<Event> mockEvents = [
 final Map<String, Event> mockEventsById = {for (final e in mockEvents) e.id: e};
 
 /// =================================================================================
-/// SCOOPS
+/// SCOOPS (Mock data - now using API, but kept for fallback/testing)
 /// =================================================================================
 
 final List<Scoop> mockScoops = <Scoop>[
@@ -509,8 +509,8 @@ final List<Scoop> mockScoops = <Scoop>[
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description:
         'A practical framework for setting high-leverage goals and tracking progress.',
-    runtime: const Duration(minutes: 8, seconds: 12),
-    datePosted: DateTime.now().subtract(const Duration(days: 3)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 3)),
   ),
   Scoop(
     id: 's2',
@@ -519,8 +519,8 @@ final List<Scoop> mockScoops = <Scoop>[
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description:
         'What elite performers do before 9am — and how to make it stick.',
-    runtime: const Duration(minutes: 6, seconds: 47),
-    datePosted: DateTime.now().subtract(const Duration(days: 7)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 7)),
   ),
   Scoop(
     id: 's3',
@@ -528,8 +528,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'M. Chen',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Block, protect, and execute a weekly deep work session.',
-    runtime: const Duration(minutes: 9, seconds: 5),
-    datePosted: DateTime.now().subtract(const Duration(days: 14)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 14)),
   ),
   Scoop(
     id: 's4',
@@ -537,8 +537,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'S. Patel',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Micro-commitments that break the activation barrier.',
-    runtime: const Duration(minutes: 5, seconds: 58),
-    datePosted: DateTime.now().subtract(const Duration(days: 21)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 21)),
   ),
   Scoop(
     id: 's5',
@@ -546,8 +546,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'N. Gomez',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Turn your week into a playbook for momentum.',
-    runtime: const Duration(minutes: 7, seconds: 21),
-    datePosted: DateTime.now().subtract(const Duration(days: 28)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 28)),
   ),
   Scoop(
     id: 's6',
@@ -555,8 +555,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'R. Brown',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Quick wins to improve sleep quality this week.',
-    runtime: const Duration(minutes: 6, seconds: 2),
-    datePosted: DateTime.now().subtract(const Duration(days: 35)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 35)),
   ),
   Scoop(
     id: 's7',
@@ -564,8 +564,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'T. Nakamura',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Tie goals to habits with a single, visible sheet.',
-    runtime: const Duration(minutes: 8, seconds: 44),
-    datePosted: DateTime.now().subtract(const Duration(days: 42)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 42)),
   ),
   Scoop(
     id: 's8',
@@ -573,8 +573,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'L. Santos',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Compound skills with tiny, consistent reps.',
-    runtime: const Duration(minutes: 4, seconds: 56),
-    datePosted: DateTime.now().subtract(const Duration(days: 49)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 49)),
   ),
   Scoop(
     id: 's9',
@@ -582,8 +582,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'C. Morgan',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Meal patterns that reduce decision fatigue.',
-    runtime: const Duration(minutes: 5, seconds: 34),
-    datePosted: DateTime.now().subtract(const Duration(days: 56)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 56)),
   ),
   Scoop(
     id: 's10',
@@ -591,8 +591,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'D. Ibrahim',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Turn stumbles into data, not drama.',
-    runtime: const Duration(minutes: 7, seconds: 8),
-    datePosted: DateTime.now().subtract(const Duration(days: 63)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 63)),
   ),
   Scoop(
     id: 's11',
@@ -600,8 +600,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'E. Park',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Silent modes and batching that actually stick.',
-    runtime: const Duration(minutes: 6, seconds: 19),
-    datePosted: DateTime.now().subtract(const Duration(days: 70)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 70)),
   ),
   Scoop(
     id: 's12',
@@ -609,17 +609,17 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'J. Carter',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Build identity by counting inputs you control.',
-    runtime: const Duration(minutes: 9, seconds: 40),
-    datePosted: DateTime.now().subtract(const Duration(days: 77)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 77)),
   ),
   Scoop(
     id: 's13',
-    title: 'Habit Tracking that Doesn’t Suck',
+    title: "Habit Tracking that Doesn't Suck",
     author: 'M. Singh',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
-    description: 'Minimalist tracking you’ll actually maintain.',
-    runtime: const Duration(minutes: 5, seconds: 11),
-    datePosted: DateTime.now().subtract(const Duration(days: 84)),
+    description: "Minimalist tracking you'll actually maintain.",
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 84)),
   ),
   Scoop(
     id: 's14',
@@ -627,8 +627,8 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'P. Nguyen',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Conversation openers and follow-ups that work.',
-    runtime: const Duration(minutes: 6, seconds: 27),
-    datePosted: DateTime.now().subtract(const Duration(days: 91)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 91)),
   ),
   Scoop(
     id: 's15',
@@ -636,7 +636,7 @@ final List<Scoop> mockScoops = <Scoop>[
     author: 'R. Alvarez',
     videoUrl: 'https://www.youtube.com/watch?v=aad35J4De2c',
     description: 'Set it up once, benefit weekly.',
-    runtime: const Duration(minutes: 7, seconds: 55),
-    datePosted: DateTime.now().subtract(const Duration(days: 98)),
+    published: true,
+    createdAt: DateTime.now().subtract(const Duration(days: 98)),
   ),
 ];

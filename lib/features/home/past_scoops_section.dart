@@ -1,15 +1,45 @@
 import 'package:flutter/material.dart';
-import '../../data/mock/mock_data.dart';
+import '../../business/scoops/entities/scoop.dart';
+import '../../data/services/api_service.dart';
 import '../../core/routes.dart';
 import '../../presentation/widgets/saturday_scoop_small.dart';
 
-class PastScoopsSection extends StatelessWidget {
+class PastScoopsSection extends StatefulWidget {
   const PastScoopsSection({super.key});
+
+  @override
+  State<PastScoopsSection> createState() => _PastScoopsSectionState();
+}
+
+class _PastScoopsSectionState extends State<PastScoopsSection> {
+  List<Scoop> _scoops = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScoops();
+  }
+
+  Future<void> _loadScoops() async {
+    final scoops = await ApiService.instance.getPastScoops();
+    if (mounted) {
+      setState(() {
+        _scoops = scoops;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+
+    // Don't show section if loading or no scoops
+    if (_isLoading || _scoops.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,12 +71,12 @@ class PastScoopsSection extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 2),
-            itemCount: (mockScoops.length > 10 ? 10 : mockScoops.length) + 1,
+            itemCount: (_scoops.length > 10 ? 10 : _scoops.length) + 1,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               // Show up to 10 scoop cards
-              if (i < 10 && i < mockScoops.length) {
-                final scoop = mockScoops[i];
+              if (i < 10 && i < _scoops.length) {
+                final scoop = _scoops[i];
                 return SizedBox(
                   width: 105,
                   child: SaturdayScoopSmall(

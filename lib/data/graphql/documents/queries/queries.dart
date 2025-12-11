@@ -8,3 +8,4 @@ export 'get_family_members_query.dart';
 export 'get_user_mentee_data_query.dart';
 export 'get_mentee_community_service_query.dart';
 export 'get_inbox_query.dart';
+export 'get_saturday_scoops_query.dart';

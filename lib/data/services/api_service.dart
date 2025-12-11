@@ -17,6 +17,7 @@ import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
 import '../../business/events/entities/event.dart';
 import '../../business/messages/entities/message.dart';
+import '../../business/scoops/entities/scoop.dart';
 import '../mock/mock_leaderboard.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/queries/queries.dart';
@@ -86,6 +87,8 @@ class ApiService {
     _eventsLastFetched = null;
     _cachedInbox = null;
     _inboxLastFetched = null;
+    _cachedScoops = null;
+    _scoopsLastFetched = null;
     changes.value++; // notify listeners
   }
 
@@ -522,6 +525,115 @@ class ApiService {
   void clearInboxCache() {
     _cachedInbox = null;
     _inboxLastFetched = null;
+  }
+
+  // ============================================================
+  // SATURDAY SCOOPS
+  // ============================================================
+
+  List<Scoop>? _cachedScoops;
+  DateTime? _scoopsLastFetched;
+
+  /// Fetches all Saturday Scoops from the API
+  Future<List<Scoop>> getSaturdayScoops({bool forceRefresh = false}) async {
+    // Return cached data if valid and not forcing refresh
+    if (!forceRefresh &&
+        _cachedScoops != null &&
+        _scoopsLastFetched != null &&
+        DateTime.now().difference(_scoopsLastFetched!).inMinutes < 10) {
+      return _cachedScoops!;
+    }
+
+    if (kDebugMode) {
+      print('📰 API: Fetching Saturday Scoops...');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getSaturdayScoopsQuery),
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error fetching scoops: ${result.exception}');
+        }
+        return _cachedScoops ?? [];
+      }
+
+      final scoopsData = result.data?['saturdayScoops'] as List<dynamic>? ?? [];
+      final scoops = scoopsData
+          .map((json) => Scoop.fromJson(json as Map<String, dynamic>))
+          .where((scoop) => scoop.published) // Only include published scoops
+          .toList();
+
+      // Sort by publishOn/createdAt descending (newest first)
+      scoops.sort((a, b) => b.datePosted.compareTo(a.datePosted));
+
+      _cachedScoops = scoops;
+      _scoopsLastFetched = DateTime.now();
+
+      if (kDebugMode) {
+        print('✅ API: Fetched ${scoops.length} published scoops');
+      }
+
+      return scoops;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching scoops: $e');
+      }
+      return _cachedScoops ?? [];
+    }
+  }
+
+  /// Gets the current week's Saturday Scoop (published within the last 7 days)
+  Future<Scoop?> getThisWeeksScoop() async {
+    final scoops = await getSaturdayScoops();
+    if (scoops.isEmpty) return null;
+
+    final now = DateTime.now();
+    final weekAgo = now.subtract(const Duration(days: 7));
+
+    // Find scoops published in the last 7 days
+    final recentScoops = scoops.where((scoop) {
+      return scoop.datePosted.isAfter(weekAgo) &&
+          scoop.datePosted.isBefore(now.add(const Duration(days: 1)));
+    }).toList();
+
+    if (recentScoops.isEmpty) return null;
+    return recentScoops.first; // Already sorted by date, first is most recent
+  }
+
+  /// Gets past scoops (older than this week)
+  Future<List<Scoop>> getPastScoops() async {
+    final scoops = await getSaturdayScoops();
+    if (scoops.isEmpty) return [];
+
+    final now = DateTime.now();
+    final weekAgo = now.subtract(const Duration(days: 7));
+
+    // Filter to only scoops older than a week
+    return scoops.where((scoop) {
+      return scoop.datePosted.isBefore(weekAgo);
+    }).toList();
+  }
+
+  /// Gets a single scoop by ID from the cached scoops
+  Scoop? getScoopById(String id) {
+    if (_cachedScoops == null) return null;
+    try {
+      return _cachedScoops!.firstWhere((s) => s.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Clears the scoops cache
+  void clearScoopsCache() {
+    _cachedScoops = null;
+    _scoopsLastFetched = null;
   }
 
   /// Gets mentee data for a user including guardians and mentor

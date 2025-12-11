@@ -1,5 +1,6 @@
 // lib/presentation/screens/scoop_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../business/scoops/entities/scoop.dart';
 import '../../core/utils/date_formatters.dart';
@@ -16,6 +17,35 @@ class ScoopDetailScreen extends StatefulWidget {
 class _ScoopDetailScreenState extends State<ScoopDetailScreen> {
   bool _playing = false;
 
+  /// Get the best video URL to use
+  String? get _videoUrl => widget.scoop.videoUrl ?? widget.scoop.videoEmbedUrl;
+
+  /// Check if we have any video to play
+  bool get _hasVideo => widget.scoop.youtubeId != null || _videoUrl != null;
+
+  void _handlePlay() {
+    final s = widget.scoop;
+
+    // If it's a YouTube video, play inline
+    if (s.youtubeId != null) {
+      setState(() => _playing = true);
+      return;
+    }
+
+    // Otherwise, try to open the video URL in a browser
+    final url = _videoUrl;
+    if (url != null) {
+      _openUrl(url);
+    }
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
@@ -29,9 +59,7 @@ class _ScoopDetailScreenState extends State<ScoopDetailScreen> {
         if (!_playing || s.youtubeId == null)
           _HeaderImageWithPlay(
             imageUrl: s.thumbnailUrl,
-            onPlay: s.youtubeId == null
-                ? null
-                : () => setState(() => _playing = true),
+            onPlay: _hasVideo ? _handlePlay : null,
           )
         else
           // You can pass either the id or the full URL; the widget parses both
@@ -55,32 +83,14 @@ class _ScoopDetailScreenState extends State<ScoopDetailScreen> {
               Divider(height: 1, thickness: 1, color: cs.outlineVariant),
               const SizedBox(height: 16),
 
-              Text(
-                'About',
-                style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Text(s.description, style: t.bodyLarge),
-              const SizedBox(height: 12),
-
-              // Runtime chip
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+              if (s.description != null && s.description!.isNotEmpty) ...[
+                Text(
+                  'About',
+                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
-                decoration: BoxDecoration(
-                  color: cs.secondaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Runtime: ${s.runtimeLabel}',
-                  style: t.labelMedium?.copyWith(
-                    color: cs.onSecondaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+                const SizedBox(height: 8),
+                Text(s.description!, style: t.bodyLarge),
+              ],
             ],
           ),
         ),

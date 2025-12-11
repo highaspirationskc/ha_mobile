@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/mock/mock_data.dart';
+import '../../business/scoops/entities/scoop.dart';
+import '../../data/services/api_service.dart';
 import '../../core/routes.dart';
 import '../widgets/list_tile_scoop.dart';
 
@@ -13,8 +14,26 @@ class PastScoopsScreen extends StatefulWidget {
 class _PastScoopsScreenState extends State<PastScoopsScreen> {
   static const int _itemsPerPage = 10;
   int _currentPage = 1;
+  List<Scoop> _scoops = [];
+  bool _isLoading = true;
 
-  int get _totalItems => mockScoops.length;
+  @override
+  void initState() {
+    super.initState();
+    _loadScoops();
+  }
+
+  Future<void> _loadScoops() async {
+    final scoops = await ApiService.instance.getSaturdayScoops();
+    if (mounted) {
+      setState(() {
+        _scoops = scoops;
+        _isLoading = false;
+      });
+    }
+  }
+
+  int get _totalItems => _scoops.length;
   int get _displayedItems => _currentPage * _itemsPerPage;
   bool get _hasMore => _displayedItems < _totalItems;
 
@@ -26,6 +45,34 @@ class _PastScoopsScreenState extends State<PastScoopsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_scoops.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.video_library_outlined,
+                size: 64,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No scoops yet',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final itemsToShow = _displayedItems > _totalItems
         ? _totalItems
         : _displayedItems;
@@ -38,7 +85,7 @@ class _PastScoopsScreenState extends State<PastScoopsScreen> {
         itemBuilder: (context, i) {
           // Show scoop tile
           if (i < itemsToShow) {
-            final scoop = mockScoops[i];
+            final scoop = _scoops[i];
             return ListTileScoop(
               scoop: scoop,
               onTap: () {
