@@ -1,34 +1,75 @@
 import 'package:flutter/material.dart';
-import '../../data/mock/mock_leaderboard.dart';
+import '../../business/user/entities/user_base.dart';
+import '../../core/session.dart';
+import '../../data/services/api_service.dart';
 import 'widgets/mentee_list_items.dart';
 
-class MenteeSection extends StatelessWidget {
+class MenteeSection extends StatefulWidget {
   const MenteeSection({super.key});
+
+  @override
+  State<MenteeSection> createState() => _MenteeSectionState();
+}
+
+class _MenteeSectionState extends State<MenteeSection> {
+  List<User> _mentees = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMentees();
+  }
+
+  Future<void> _loadMentees() async {
+    try {
+      final mentorId = currentUserId;
+      final mentees = await ApiService.instance.getMenteesByMentor(
+        mentorId: mentorId,
+      );
+      if (mounted) {
+        setState(() {
+          _mentees = mentees;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
-    // Get the 10 mentees with lowest points (for "Eyes On" - mentees who need attention)
-    final menteesWithPoints = mockMenteeRankings
-        .map(
-          (ranking) => {
-            'firstName': ranking.mentee.firstName,
-            'lastName': ranking.mentee.lastName,
-            'image': ranking.mentee.image,
-            'colorIndex': ranking.mentee.colorIndex,
-            'points': ranking.points,
-            'id': ranking.mentee.id,
-          },
-        )
-        .toList();
+    if (_isLoading) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Eyes On',
+            style: textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const SizedBox(
+            height: 160,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        ],
+      );
+    }
 
-    // Sort by points ascending (lowest first) and take first 10
-    menteesWithPoints.sort(
-      (a, b) => (a['points'] as int).compareTo(b['points'] as int),
-    );
-    final eyesOnMentees = menteesWithPoints.take(10).toList();
+    if (_mentees.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,16 +86,16 @@ class MenteeSection extends StatelessWidget {
           height: 160,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: eyesOnMentees.length,
+            itemCount: _mentees.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (_, index) {
-              final mentee = eyesOnMentees[index];
+              final mentee = _mentees[index];
               return MenteeListItem(
-                firstName: mentee['firstName'] as String?,
-                lastName: mentee['lastName'] as String?,
-                image: mentee['image'] as String?,
-                colorIndex: mentee['colorIndex'] as int?,
-                points: mentee['points'] as int,
+                firstName: mentee.firstName,
+                lastName: mentee.lastName,
+                image: mentee.image,
+                colorIndex: mentee.colorIndex,
+                points: 0, // TODO: Fetch points from leaderboard/eventLogs
                 onTap: () {
                   // TODO: Navigate to mentee detail screen
                 },

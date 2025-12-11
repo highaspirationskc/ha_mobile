@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 
 /// Reusable in-app video player.
-/// Currently supports YouTube. Extend later for file/HLS sources if needed.
+/// Supports YouTube and iframe-based video embeds (Cloudflare Stream, Vimeo, etc.)
 class VideoPlayer extends StatefulWidget {
-  /// Provide either a full YouTube URL or the 11-char videoId.
+  /// Provide either a full video URL, embed URL, or YouTube video ID.
   final String youtubeIdOrUrl;
 
   /// Autoplay once rendered.
@@ -19,48 +23,155 @@ class VideoPlayer extends StatefulWidget {
   @override
   State<VideoPlayer> createState() => _VideoPlayerState();
 
+  /// Check if the URL is a YouTube URL
+  static bool isYoutubeUrl(String input) {
+    final lower = input.toLowerCase();
+    return lower.contains('youtube.com') ||
+        lower.contains('youtu.be') ||
+        RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(input);
+  }
+
+  /// Check if the URL is an iframe embed URL (ends with /iframe or similar)
+  static bool isIframeUrl(String input) {
+    final lower = input.toLowerCase();
+    return lower.contains('/iframe') ||
+        lower.contains('cloudflarestream.com') ||
+        lower.contains('player.vimeo.com');
+  }
+
   /// Extracts a YouTube video id from a url or returns the input if it already
   /// looks like an id. Returns null if it can't parse.
   static String? parseYoutubeId(String input) {
-    // already looks like an id
+    if (kDebugMode) {
+      print('🎬 VideoPlayer: Parsing YouTube ID from: $input');
+    }
+
+    // Already looks like an id (11 chars, alphanumeric with _ and -)
     final idLike = RegExp(r'^[A-Za-z0-9_-]{11}$');
-    if (idLike.hasMatch(input)) return input;
+    if (idLike.hasMatch(input)) {
+      if (kDebugMode) print('🎬 VideoPlayer: Input is already a valid ID');
+      return input;
+    }
+
+    // Only try to parse if it looks like a YouTube URL
+    if (!isYoutubeUrl(input)) {
+      if (kDebugMode) print('🎬 VideoPlayer: Not a YouTube URL');
+      return null;
+    }
 
     try {
       final uri = Uri.parse(input);
-      // common patterns: ?v=ID, youtu.be/ID, /embed/ID
-      final v = uri.queryParameters['v'];
-      if (v != null && idLike.hasMatch(v)) return v;
 
-      final path = uri.path; // e.g. /watch, /embed/ID, /ID
-      final m = RegExp(
-        r'(?:/embed/|/shorts/|/)([A-Za-z0-9_-]{11})',
-      ).firstMatch(path);
-      if (m != null && m.groupCount >= 1) return m.group(1);
-    } catch (_) {}
+      // Check ?v=ID parameter (youtube.com/watch?v=ID)
+      final v = uri.queryParameters['v'];
+      if (v != null && idLike.hasMatch(v)) {
+        if (kDebugMode) print('🎬 VideoPlayer: Found ID in ?v= param: $v');
+        return v;
+      }
+
+      // Check for /embed/ID pattern
+      final embedMatch = RegExp(
+        r'/embed/([A-Za-z0-9_-]{11})',
+      ).firstMatch(input);
+      if (embedMatch != null) {
+        final id = embedMatch.group(1);
+        if (kDebugMode) print('🎬 VideoPlayer: Found ID in /embed/ path: $id');
+        return id;
+      }
+
+      // Check for /shorts/ID pattern
+      final shortsMatch = RegExp(
+        r'/shorts/([A-Za-z0-9_-]{11})',
+      ).firstMatch(input);
+      if (shortsMatch != null) {
+        final id = shortsMatch.group(1);
+        if (kDebugMode) print('🎬 VideoPlayer: Found ID in /shorts/ path: $id');
+        return id;
+      }
+
+      // Check for youtu.be/ID pattern
+      if (uri.host.contains('youtu.be')) {
+        final pathSegments = uri.pathSegments;
+        if (pathSegments.isNotEmpty && idLike.hasMatch(pathSegments.first)) {
+          if (kDebugMode) {
+            print(
+              '🎬 VideoPlayer: Found ID in youtu.be path: ${pathSegments.first}',
+            );
+          }
+          return pathSegments.first;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('🎬 VideoPlayer: Error parsing URL: $e');
+    }
+
+    if (kDebugMode) print('🎬 VideoPlayer: Could not extract YouTube ID');
     return null;
   }
 }
 
 class _VideoPlayerState extends State<VideoPlayer> {
   YoutubePlayerController? _yt;
+  String? _iframeViewType;
+  bool _isIframeEmbed = false;
 
   @override
   void initState() {
     super.initState();
-    final id = VideoPlayer.parseYoutubeId(widget.youtubeIdOrUrl);
-    if (id != null) {
-      _yt = YoutubePlayerController.fromVideoId(
-        videoId: id,
-        autoPlay: widget.autoPlay,
-        params: const YoutubePlayerParams(
-          showControls: true,
-          showFullscreenButton: true,
-          strictRelatedVideos: true,
-          enableCaption: true,
-        ),
-      );
+    _initializePlayer();
+  }
+
+  void _initializePlayer() {
+    final url = widget.youtubeIdOrUrl;
+
+    // Check if this is a YouTube video
+    if (VideoPlayer.isYoutubeUrl(url)) {
+      final id = VideoPlayer.parseYoutubeId(url);
+      if (id != null) {
+        if (kDebugMode) {
+          print('🎬 VideoPlayer: Creating YouTube controller for ID: $id');
+        }
+        _yt = YoutubePlayerController.fromVideoId(
+          videoId: id,
+          autoPlay: widget.autoPlay,
+          params: const YoutubePlayerParams(
+            showControls: true,
+            showFullscreenButton: true,
+            strictRelatedVideos: true,
+            enableCaption: true,
+          ),
+        );
+        return;
+      }
     }
+
+    // For non-YouTube URLs (Cloudflare Stream, etc.), use iframe embed
+    if (VideoPlayer.isIframeUrl(url) || url.startsWith('http')) {
+      if (kDebugMode) {
+        print('🎬 VideoPlayer: Using iframe embed for: $url');
+      }
+      _isIframeEmbed = true;
+      _iframeViewType = 'video-iframe-${url.hashCode}';
+      _registerIframeView(url);
+    }
+  }
+
+  void _registerIframeView(String url) {
+    // Register the iframe view for Flutter Web
+    // ignore: undefined_prefixed_name
+    ui_web.platformViewRegistry.registerViewFactory(_iframeViewType!, (
+      int viewId,
+    ) {
+      final iframe = html.IFrameElement()
+        ..src = url
+        ..style.border = 'none'
+        ..style.width = '100%'
+        ..style.height = '100%'
+        ..allow =
+            'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen'
+        ..allowFullscreen = true;
+      return iframe;
+    });
   }
 
   @override
@@ -71,22 +182,42 @@ class _VideoPlayerState extends State<VideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    // If we couldn't parse a YouTube id, show a graceful placeholder.
-    if (_yt == null) {
-      final cs = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
+
+    // YouTube player
+    if (_yt != null) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: Container(
-          color: cs.surfaceVariant,
-          alignment: Alignment.center,
-          child: Icon(Icons.play_circle_fill, color: cs.primary, size: 48),
-        ),
+        child: YoutubePlayer(controller: _yt!),
       );
     }
 
+    // Iframe embed (Cloudflare Stream, Vimeo, etc.)
+    if (_isIframeEmbed && _iframeViewType != null) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: HtmlElementView(viewType: _iframeViewType!),
+      );
+    }
+
+    // Fallback placeholder
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: YoutubePlayer(controller: _yt!),
+      child: Container(
+        color: cs.surfaceVariant,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.videocam_off, color: cs.onSurfaceVariant, size: 48),
+            const SizedBox(height: 8),
+            Text(
+              'Video unavailable',
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

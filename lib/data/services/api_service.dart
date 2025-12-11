@@ -1046,6 +1046,8 @@ class ApiService {
           "${topMentee.mentee.firstName} has been an outstanding member of our program, "
           "consistently demonstrating leadership and dedication. Their positive attitude "
           "and commitment to excellence make them a true role model for their peers.",
+      teamName: topMentee.team?.name,
+      points: topMentee.points,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

@@ -1,6 +1,6 @@
 // lib/presentation/screens/scoop_detail_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../business/scoops/entities/scoop.dart';
 import '../../core/utils/date_formatters.dart';
@@ -17,32 +17,42 @@ class ScoopDetailScreen extends StatefulWidget {
 class _ScoopDetailScreenState extends State<ScoopDetailScreen> {
   bool _playing = false;
 
-  /// Get the best video URL to use
-  String? get _videoUrl => widget.scoop.videoUrl ?? widget.scoop.videoEmbedUrl;
+  @override
+  void initState() {
+    super.initState();
+    _logVideoInfo();
+  }
 
-  /// Check if we have any video to play
-  bool get _hasVideo => widget.scoop.youtubeId != null || _videoUrl != null;
-
-  void _handlePlay() {
-    final s = widget.scoop;
-
-    // If it's a YouTube video, play inline
-    if (s.youtubeId != null) {
-      setState(() => _playing = true);
-      return;
-    }
-
-    // Otherwise, try to open the video URL in a browser
-    final url = _videoUrl;
-    if (url != null) {
-      _openUrl(url);
+  void _logVideoInfo() {
+    if (kDebugMode) {
+      final s = widget.scoop;
+      print('🎥 Scoop Video Info:');
+      print('   Title: ${s.title}');
+      print('   videoUrl: ${s.videoUrl}');
+      print('   videoEmbedUrl: ${s.videoEmbedUrl}');
+      print('   youtubeId (extracted): ${s.youtubeId}');
+      print('   thumbnailUrl: ${s.thumbnailUrl}');
     }
   }
 
-  Future<void> _openUrl(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  /// Get the best video URL to use for the player
+  /// Prefer videoEmbedUrl (usually YouTube embed format), then videoUrl
+  String? get _playableUrl {
+    final s = widget.scoop;
+    return s.videoEmbedUrl ?? s.videoUrl;
+  }
+
+  /// Check if we have any video to play
+  bool get _hasVideo => _playableUrl != null && _playableUrl!.isNotEmpty;
+
+  void _handlePlay() {
+    if (kDebugMode) {
+      print('🎥 Play button pressed');
+      print('   playableUrl: $_playableUrl');
+    }
+
+    if (_hasVideo) {
+      setState(() => _playing = true);
     }
   }
 
@@ -56,14 +66,16 @@ class _ScoopDetailScreenState extends State<ScoopDetailScreen> {
       padding: EdgeInsets.zero,
       children: [
         // Header: either 16:9 thumbnail with play overlay OR in-app player
-        if (!_playing || s.youtubeId == null)
+        if (!_playing)
           _HeaderImageWithPlay(
             imageUrl: s.thumbnailUrl,
             onPlay: _hasVideo ? _handlePlay : null,
           )
+        else if (_playableUrl != null)
+          // Pass the full URL - VideoPlayer will extract the YouTube ID
+          VideoPlayer(youtubeIdOrUrl: _playableUrl!, autoPlay: true)
         else
-          // You can pass either the id or the full URL; the widget parses both
-          VideoPlayer(youtubeIdOrUrl: s.youtubeId!, autoPlay: true),
+          _HeaderImageWithPlay(imageUrl: s.thumbnailUrl, onPlay: null),
 
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),

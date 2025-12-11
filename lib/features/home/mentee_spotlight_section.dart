@@ -65,7 +65,7 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
       children: [
         // Header
         Text(
-          'Mentee Spotlight',
+          'Spotlight',
           style: textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: cs.onSurface,
@@ -150,6 +150,49 @@ class _MenteeSpotlightSectionState extends State<MenteeSpotlightSection> {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                        ),
+
+                        // Team name and points
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            if (spotlight.teamName != null) ...[
+                              Text(
+                                spotlight.teamName!,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontWeight: FontWeight.w500,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      offset: const Offset(0, 1),
+                                      blurRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '  •  ',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                            Text(
+                              '${spotlight.points} pts',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: Colors.white.withOpacity(0.9),
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    offset: const Offset(0, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
 
                         // Expanded description

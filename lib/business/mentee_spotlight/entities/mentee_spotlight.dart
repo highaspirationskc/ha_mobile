@@ -11,6 +11,8 @@ class MenteeSpotlight {
   final String description;
   final String? imageUrl;
   final User? author; // Staff member who wrote the spotlight
+  final String? teamName; // Team the mentee belongs to
+  final int points; // Points the mentee has earned
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -20,6 +22,8 @@ class MenteeSpotlight {
     required this.description,
     this.imageUrl,
     this.author,
+    this.teamName,
+    this.points = 0,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -39,6 +43,8 @@ class MenteeSpotlight {
       ),
       description: json['description'] as String,
       imageUrl: json['imageUrl'] as String?,
+      teamName: json['teamName'] as String?,
+      points: json['points'] as int? ?? 0,
       author: json['author'] != null
           ? User(
               id: json['author']['id'] as String,
@@ -62,6 +68,8 @@ class MenteeSpotlight {
       'mentee': mentee.toJson(),
       'description': description,
       'imageUrl': imageUrl,
+      'teamName': teamName,
+      'points': points,
       'author': author?.toJson(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -75,6 +83,8 @@ class MenteeSpotlight {
     String? title,
     String? imageUrl,
     User? author,
+    String? teamName,
+    int? points,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -84,6 +94,8 @@ class MenteeSpotlight {
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
       author: author ?? this.author,
+      teamName: teamName ?? this.teamName,
+      points: points ?? this.points,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -97,6 +109,8 @@ class MenteeSpotlight {
         other.mentee == mentee &&
         other.description == description &&
         other.imageUrl == imageUrl &&
+        other.teamName == teamName &&
+        other.points == points &&
         other.author == author &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
@@ -109,6 +123,8 @@ class MenteeSpotlight {
       mentee,
       description,
       imageUrl,
+      teamName,
+      points,
       author,
       createdAt,
       updatedAt,
