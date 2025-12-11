@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../presentation/widgets/bottom_sheet_community_service.dart';
-import '../../presentation/widgets/bottom_sheet_pulse.dart';
+// import '../../presentation/widgets/bottom_sheet_pulse.dart'; // Commented out with Check-In button
 
 class AddSection extends StatelessWidget {
   const AddSection({super.key});
@@ -21,52 +21,47 @@ class AddSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _AddButton(
-                icon: Icons.groups,
-                label: 'Community Service',
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    useRootNavigator: true,
-                    builder: (context) => const BottomSheetCommunityService(),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _AddButton(
-                icon: Icons.fact_check,
-                label: 'Check-In',
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    useRootNavigator: true,
-                    builder: (context) => const BottomSheetPulse(),
-                  );
-                },
-              ),
-            ),
-          ],
+        // Community Service - full width outlined button
+        _AddButtonLong(
+          icon: Icons.groups,
+          label: 'Community Service',
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              useRootNavigator: true,
+              builder: (context) => const BottomSheetCommunityService(),
+            );
+          },
         ),
+        // Check-In button - commented out for now
+        // const SizedBox(height: 12),
+        // _AddButtonLong(
+        //   icon: Icons.fact_check,
+        //   label: 'Check-In',
+        //   onTap: () {
+        //     showModalBottomSheet(
+        //       context: context,
+        //       isScrollControlled: true,
+        //       backgroundColor: Colors.transparent,
+        //       useRootNavigator: true,
+        //       builder: (context) => const BottomSheetPulse(),
+        //     );
+        //   },
+        // ),
       ],
     );
   }
 }
 
-class _AddButton extends StatelessWidget {
+/// Long outlined button for Add section
+class _AddButtonLong extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
-  const _AddButton({
+  const _AddButtonLong({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -80,36 +75,27 @@ class _AddButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       elevation: 0,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          height: 120,
-          padding: const EdgeInsets.all(16),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
             border: Border.all(color: cs.outline, width: 1),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Stack(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Icon in top right
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Icon(icon, size: 24, color: cs.onSurface),
-              ),
-              // Label at bottom left
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 40,
-                child: Text(
-                  label,
-                  style: t.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
+              Icon(icon, size: 24, color: cs.onSurface),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: t.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
                 ),
               ),
             ],

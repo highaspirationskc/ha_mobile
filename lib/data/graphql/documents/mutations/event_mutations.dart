@@ -27,3 +27,13 @@ const String checkInToEventMutation = r'''
     }
   }
 ''';
+
+/// GraphQL mutation to unregister from an event
+const String unregisterFromEventMutation = r'''
+  mutation Unregister($input: RegisterInput!) {
+    unregister(input: $input) {
+      success
+      errors
+    }
+  }
+''';

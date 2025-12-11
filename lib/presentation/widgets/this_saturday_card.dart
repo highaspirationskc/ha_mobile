@@ -139,8 +139,9 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left side - Content
+              // Left side - Content (50%)
               Expanded(
+                flex: 1,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -271,74 +272,76 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                 ),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
 
-              // Right side - Image with badge
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 120,
-                      height: 140,
-                      child: _EventImage(src: e.imageUrl ?? ''),
+              // Right side - Image with badge (50%)
+              Expanded(
+                flex: 1,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(
+                        aspectRatio: 0.85, // Slightly taller than wide
+                        child: _EventImage(src: e.imageUrl ?? ''),
+                      ),
                     ),
-                  ),
-                  // Status badge overlay (Registered or Arrived)
-                  if (_registered || _checkedIn)
-                    Positioned(
-                      bottom: 8,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _checkedIn
-                                ? Colors.green.shade50
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _checkedIn
-                                    ? Icons.check_circle
-                                    : Icons.verified,
-                                size: 14,
-                                color: _checkedIn
-                                    ? Colors.green.shade700
-                                    : const Color(0xFF2C3E5C),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _checkedIn ? 'Arrived' : 'Registered',
-                                style: t.labelSmall?.copyWith(
+                    // Status badge overlay (Registered or Arrived)
+                    if (_registered || _checkedIn)
+                      Positioned(
+                        bottom: 8,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _checkedIn
+                                  ? Colors.green.shade50
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(999),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _checkedIn
+                                      ? Icons.check_circle
+                                      : Icons.verified,
+                                  size: 14,
                                   color: _checkedIn
                                       ? Colors.green.shade700
                                       : const Color(0xFF2C3E5C),
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  _checkedIn ? 'Arrived' : 'Registered',
+                                  style: t.labelSmall?.copyWith(
+                                    color: _checkedIn
+                                        ? Colors.green.shade700
+                                        : const Color(0xFF2C3E5C),
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

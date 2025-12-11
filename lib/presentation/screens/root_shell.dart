@@ -417,8 +417,8 @@ class _RootShellState extends State<RootShell> {
         final hideAppBar = _shouldHideAppBar(currentRoute);
         final hideNavBar = _shouldHideNavBar(currentRoute);
 
-        // Unread count - API doesn't track read status yet, so no badge for now
-        const unreadCount = 0;
+        // Unread count - for now, always show red dot (assume unread messages)
+        const unreadCount = 1;
 
         // Get current user for avatar
         final user = _currentUser ?? currentUser;

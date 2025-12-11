@@ -163,11 +163,58 @@ class ApiService {
     required String eventId,
     required String userId,
   }) async {
-    // TODO: Add GraphQL mutation for unregister when available
-    await Future.delayed(const Duration(milliseconds: 400));
-    _registrations[userId]?.remove(eventId);
-    _checkins[userId]?.remove(eventId);
-    changes.value++; // notify listeners
+    if (kDebugMode) {
+      print('🚫 API: Unregistering from event: $eventId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(unregisterFromEventMutation),
+          variables: {
+            'input': {'eventId': eventId},
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error unregistering: ${result.exception}');
+        }
+        throw Exception('Failed to unregister: ${result.exception}');
+      }
+
+      final unregisterData =
+          result.data?['unregister'] as Map<String, dynamic>?;
+      final errors = unregisterData?['errors'] as List<dynamic>?;
+      final success = unregisterData?['success'] as bool? ?? false;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception(errors.join(', '));
+      }
+
+      if (!success) {
+        throw Exception('Failed to unregister');
+      }
+
+      if (kDebugMode) {
+        print('✅ API: Unregistered successfully');
+      }
+
+      // Update local cache
+      _registrations[userId]?.remove(eventId);
+      _checkins[userId]?.remove(eventId);
+
+      // Refetch events to update registeredUsers lists
+      await _refetchEvents();
+
+      changes.value++; // notify listeners
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception unregistering from event: $e');
+      }
+      rethrow;
+    }
   }
 
   /// Check in to an event using GraphQL mutation
