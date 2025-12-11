@@ -30,7 +30,7 @@ import '../../business/events/entities/event.dart';
 import '../../business/scoops/entities/scoop.dart';
 
 // Mock data
-import '../../data/mock/mock_messages.dart';
+// Mock messages import removed - now using API service
 
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
@@ -417,8 +417,8 @@ class _RootShellState extends State<RootShell> {
         final hideAppBar = _shouldHideAppBar(currentRoute);
         final hideNavBar = _shouldHideNavBar(currentRoute);
 
-        // Count unread messages for notification badge
-        final unreadCount = mockMessages.where((msg) => !msg.read).length;
+        // Unread count - API doesn't track read status yet, so no badge for now
+        const unreadCount = 0;
 
         // Get current user for avatar
         final user = _currentUser ?? currentUser;

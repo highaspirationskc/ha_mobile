@@ -7,3 +7,4 @@ export 'get_olympic_season_query.dart';
 export 'get_family_members_query.dart';
 export 'get_user_mentee_data_query.dart';
 export 'get_mentee_community_service_query.dart';
+export 'get_inbox_query.dart';

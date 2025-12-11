@@ -1,20 +1,97 @@
 import 'package:flutter/material.dart';
 import '../../../core/routes.dart';
-import '../../data/mock/mock_messages.dart';
+import '../../data/services/api_service.dart';
 import '../../business/messages/entities/message.dart';
 import '../widgets/list_tile_message.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  List<Message> _messages = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
+
+  Future<void> _loadMessages() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final messages = await ApiService.instance.getInbox();
+      if (mounted) {
+        setState(() {
+          _messages = messages;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Sort messages newest to oldest
-    final sortedMessages = List<Message>.from(mockMessages)
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Error loading messages',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: _loadMessages, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    if (_messages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No messages yet',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     // Group messages by time period
-    final groupedMessages = _groupMessagesByTime(sortedMessages);
+    final groupedMessages = _groupMessagesByTime(_messages);
 
     return Column(
       children: [

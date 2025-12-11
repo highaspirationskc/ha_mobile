@@ -16,6 +16,7 @@ import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
 import '../../business/events/entities/event.dart';
+import '../../business/messages/entities/message.dart';
 import '../mock/mock_leaderboard.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/queries/queries.dart';
@@ -83,6 +84,8 @@ class ApiService {
     _pulses.clear();
     _cachedEvents = null;
     _eventsLastFetched = null;
+    _cachedInbox = null;
+    _inboxLastFetched = null;
     changes.value++; // notify listeners
   }
 
@@ -443,6 +446,82 @@ class ApiService {
       final cached = _communityServices[userId] ?? [];
       return cached.fold<double>(0, (total, s) => total + s.hours);
     }
+  }
+
+  // ============================================================
+  // INBOX / MESSAGES
+  // ============================================================
+
+  List<Message>? _cachedInbox;
+  DateTime? _inboxLastFetched;
+
+  /// Fetches the current user's inbox messages from the API
+  Future<List<Message>> getInbox({bool forceRefresh = false}) async {
+    // Return cached data if valid and not forcing refresh
+    if (!forceRefresh &&
+        _cachedInbox != null &&
+        _inboxLastFetched != null &&
+        DateTime.now().difference(_inboxLastFetched!).inMinutes < 5) {
+      return _cachedInbox!;
+    }
+
+    if (kDebugMode) {
+      print('📬 API: Fetching inbox messages...');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getInboxQuery),
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error fetching inbox: ${result.exception}');
+        }
+        return _cachedInbox ?? [];
+      }
+
+      final inboxData = result.data?['inbox'] as List<dynamic>? ?? [];
+      final messages = inboxData
+          .map((json) => Message.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // Sort by createdAt descending (newest first)
+      messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      _cachedInbox = messages;
+      _inboxLastFetched = DateTime.now();
+
+      if (kDebugMode) {
+        print('✅ API: Fetched ${messages.length} inbox messages');
+      }
+
+      return messages;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching inbox: $e');
+      }
+      return _cachedInbox ?? [];
+    }
+  }
+
+  /// Gets a single message by ID from the cached inbox
+  Message? getMessageById(String id) {
+    if (_cachedInbox == null) return null;
+    try {
+      return _cachedInbox!.firstWhere((m) => m.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Clears the inbox cache
+  void clearInboxCache() {
+    _cachedInbox = null;
+    _inboxLastFetched = null;
   }
 
   /// Gets mentee data for a user including guardians and mentor

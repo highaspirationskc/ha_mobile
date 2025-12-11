@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../business/messages/entities/message.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_role.dart';
-import '../../core/session.dart';
-import 'chit.dart'; // currentUser/currentUserKind
+import '../../core/theme/brand_colors.dart';
+import 'chit.dart';
 
 class ListTileMessage extends StatelessWidget {
   final Message message;
@@ -19,7 +19,9 @@ class ListTileMessage extends StatelessWidget {
 
     final author = message.author;
     final authorName = _fullName(author);
-    final showMentorChip = _isFromMyMentor(author);
+    final showMentorChip = _isMentor(author);
+    final showGuardianChip = _isGuardian(author);
+    final showStaffChip = _isStaffOrAdmin(author);
     final rel = _relativeTime(message.updatedAt ?? message.createdAt);
     final isRead = message.read;
 
@@ -66,7 +68,27 @@ class ListTileMessage extends StatelessWidget {
                               ),
                               if (showMentorChip) ...[
                                 const SizedBox(width: 8),
-                                const Chit(label: 'mentor'),
+                                Chit(
+                                  label: 'mentor',
+                                  backgroundColor: Colors.purple.shade100,
+                                  textColor: Colors.purple.shade700,
+                                ),
+                              ],
+                              if (showGuardianChip) ...[
+                                const SizedBox(width: 8),
+                                Chit(
+                                  label: 'guardian',
+                                  backgroundColor: Colors.teal.shade100,
+                                  textColor: Colors.teal.shade700,
+                                ),
+                              ],
+                              if (showStaffChip) ...[
+                                const SizedBox(width: 8),
+                                Chit(
+                                  label: 'staff',
+                                  backgroundColor: kHAPrimary.withOpacity(0.15),
+                                  textColor: kHAPrimary,
+                                ),
                               ],
                             ],
                           ),
@@ -119,13 +141,20 @@ class ListTileMessage extends StatelessWidget {
     return both.isEmpty ? (u.email ?? '') : both;
   }
 
-  /// Show the purple "mentor" chip iff:
-  /// - the current app user is a Mentee
-  /// - and the author is a mentor
-  bool _isFromMyMentor(User author) {
-    // Check if current user is a mentee and author is a mentor
-    return currentUserKind.value == CurrentUserKind.mentee &&
-        author.roles.contains(UserRole.mentor);
+  /// Show the "mentor" chip if the author is a mentor
+  bool _isMentor(User author) {
+    return author.roles.contains(UserRole.mentor);
+  }
+
+  /// Show the "guardian" chip if the author is a parent/guardian
+  bool _isGuardian(User author) {
+    return author.roles.contains(UserRole.parent);
+  }
+
+  /// Show the "staff" chip if the author is staff or admin
+  bool _isStaffOrAdmin(User author) {
+    return author.roles.contains(UserRole.staff) ||
+        author.roles.contains(UserRole.admin);
   }
 
   String _relativeTime(DateTime when) {

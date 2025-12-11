@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../business/messages/entities/message.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_role.dart';
-import '../../data/mock/mock_messages.dart';
-import '../../core/session.dart';
+import '../../data/services/api_service.dart';
+import '../../core/theme/brand_colors.dart';
 import '../widgets/chit.dart';
 
 class MessageScreen extends StatelessWidget {
@@ -12,7 +12,7 @@ class MessageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = _findMessageById(messageId);
+    final message = ApiService.instance.getMessageById(messageId ?? '');
     if (message == null) {
       return Center(child: Text('Message not found'));
     }
@@ -83,7 +83,9 @@ class MessageScreen extends StatelessWidget {
   ) {
     final author = message.author;
     final authorName = _getAuthorName(author);
-    final showMentorChip = _isFromMyMentor(author);
+    final showMentorChip = _isMentor(author);
+    final showGuardianChip = _isGuardian(author);
+    final showStaffChip = _isStaffOrAdmin(author);
     final relativeTime = _getRelativeTime(
       message.updatedAt ?? message.createdAt,
     );
@@ -96,7 +98,7 @@ class MessageScreen extends StatelessWidget {
 
         const SizedBox(width: 12),
 
-        // Author name and mentor chip
+        // Author name and mentor/staff chip
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +114,27 @@ class MessageScreen extends StatelessWidget {
                   ),
                   if (showMentorChip) ...[
                     const SizedBox(width: 8),
-                    const Chit(label: 'mentor'),
+                    Chit(
+                      label: 'mentor',
+                      backgroundColor: Colors.purple.shade100,
+                      textColor: Colors.purple.shade700,
+                    ),
+                  ],
+                  if (showGuardianChip) ...[
+                    const SizedBox(width: 8),
+                    Chit(
+                      label: 'guardian',
+                      backgroundColor: Colors.teal.shade100,
+                      textColor: Colors.teal.shade700,
+                    ),
+                  ],
+                  if (showStaffChip) ...[
+                    const SizedBox(width: 8),
+                    Chit(
+                      label: 'staff',
+                      backgroundColor: kHAPrimary.withOpacity(0.15),
+                      textColor: kHAPrimary,
+                    ),
                   ],
                 ],
               ),
@@ -136,9 +158,17 @@ class MessageScreen extends StatelessWidget {
     return fullName.isEmpty ? (user.email ?? '') : fullName;
   }
 
-  bool _isFromMyMentor(User author) {
-    return currentUserKind.value == CurrentUserKind.mentee &&
-        author.roles.contains(UserRole.mentor);
+  bool _isMentor(User author) {
+    return author.roles.contains(UserRole.mentor);
+  }
+
+  bool _isGuardian(User author) {
+    return author.roles.contains(UserRole.parent);
+  }
+
+  bool _isStaffOrAdmin(User author) {
+    return author.roles.contains(UserRole.staff) ||
+        author.roles.contains(UserRole.admin);
   }
 
   String _getRelativeTime(DateTime when) {
@@ -155,15 +185,6 @@ class MessageScreen extends StatelessWidget {
     if (months < 12) return '${months}mo';
     final years = (diff.inDays / 365).floor();
     return '${years}y';
-  }
-
-  Message? _findMessageById(String? id) {
-    if (id == null) return null;
-    try {
-      return mockMessages.firstWhere((message) => message.id == id);
-    } catch (e) {
-      return null;
-    }
   }
 }
 
