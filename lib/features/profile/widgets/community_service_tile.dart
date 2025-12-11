@@ -58,7 +58,7 @@ class _CommunityServiceTileState extends State<CommunityServiceTile> {
 
                   // Date (normal)
                   Text(
-                    DateFormat('MMM d, yyyy').format(widget.service.createdAt),
+                    DateFormat('MMM d, yyyy').format(widget.service.eventDate),
                     style: t.bodyMedium?.copyWith(color: cs.onSurface),
                   ),
                 ],
@@ -76,7 +76,9 @@ class _CommunityServiceTileState extends State<CommunityServiceTile> {
               ),
               child: Center(
                 child: Text(
-                  '${widget.service.hours}',
+                  widget.service.hours == widget.service.hours.roundToDouble()
+                      ? '${widget.service.hours.toInt()}'
+                      : widget.service.hours.toStringAsFixed(1),
                   style: t.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/routes.dart';
 
 class CommunityServiceTile extends StatelessWidget {
-  final int totalHours;
+  final double totalHours;
   final int totalEvents;
 
   const CommunityServiceTile({
@@ -49,7 +49,7 @@ class CommunityServiceTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '$totalHours hrs · $totalEvents events',
+                    '${totalHours.toStringAsFixed(totalHours == totalHours.roundToDouble() ? 0 : 1)} hrs · $totalEvents events',
                     style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],

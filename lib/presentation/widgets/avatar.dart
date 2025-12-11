@@ -1,4 +1,6 @@
 import 'dart:io' show File;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/color_schemes.dart';
@@ -13,8 +15,14 @@ class Avatar extends StatefulWidget {
   /// Image can be a local file path, an 'assets/...' path, or an http/https URL.
   final String? image;
 
+  /// Image bytes for preview (used on web before upload completes).
+  final Uint8List? imageBytes;
+
   /// Selected profile color index (0..kProfileColors.length-1). Used when no image.
   final int? colorIndex;
+
+  /// Callback when image is picked. Returns the XFile for further processing.
+  final ValueChanged<XFile?>? onImagePicked;
 
   /// Callback when the image path/URL changes. null = remove.
   final ValueChanged<String?>? onImageChanged;
@@ -28,16 +36,22 @@ class Avatar extends StatefulWidget {
   /// Shows an edit pen overlay & enables tap actions when true.
   final bool editable;
 
+  /// Shows a loading indicator over the avatar.
+  final bool isLoading;
+
   const Avatar({
     super.key,
     this.firstName,
     this.lastName,
     this.image,
+    this.imageBytes,
     this.colorIndex,
+    this.onImagePicked,
     this.onImageChanged,
     this.onColorChanged,
     this.size = 72,
     this.editable = false,
+    this.isLoading = false,
   });
 
   @override
@@ -54,7 +68,14 @@ class _AvatarState extends State<Avatar> {
 
     Widget child;
 
-    if ((widget.image ?? '').trim().isNotEmpty) {
+    // Priority: imageBytes (preview) > image URL/path > initials
+    if (widget.imageBytes != null) {
+      child = Image.memory(
+        widget.imageBytes!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    } else if ((widget.image ?? '').trim().isNotEmpty) {
       child = _buildImage(widget.image!);
     } else {
       child = Center(
@@ -70,16 +91,46 @@ class _AvatarState extends State<Avatar> {
       );
     }
 
-    final avatar = Container(
+    Widget avatar = Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
-        color: (widget.image ?? '').isEmpty ? bgColor : null,
+        color: (widget.image ?? '').isEmpty && widget.imageBytes == null
+            ? bgColor
+            : null,
         shape: BoxShape.circle,
       ),
       clipBehavior: Clip.antiAlias,
       child: child,
     );
+
+    // Show loading overlay if uploading
+    if (widget.isLoading) {
+      avatar = Stack(
+        alignment: Alignment.center,
+        children: [
+          avatar,
+          Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.4),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: SizedBox(
+                width: widget.size * 0.4,
+                height: widget.size * 0.4,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
     if (!widget.editable) return avatar;
 
@@ -164,13 +215,16 @@ class _AvatarState extends State<Avatar> {
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _fallback(),
       );
-    } else {
-      // assume file path
+    } else if (!kIsWeb) {
+      // File path - only works on native platforms
       return Image.file(
         File(src),
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _fallback(),
       );
+    } else {
+      // On web with a file path, show fallback (should use imageBytes instead)
+      return _fallback();
     }
   }
 
@@ -211,7 +265,14 @@ class _AvatarState extends State<Avatar> {
                     source: ImageSource.camera,
                     imageQuality: 90,
                   );
-                  if (x != null) widget.onImageChanged?.call(x.path);
+                  if (x != null) {
+                    // Prefer onImagePicked for better cross-platform handling
+                    if (widget.onImagePicked != null) {
+                      widget.onImagePicked!(x);
+                    } else {
+                      widget.onImageChanged?.call(x.path);
+                    }
+                  }
                 },
               ),
               ListTile(
@@ -223,16 +284,27 @@ class _AvatarState extends State<Avatar> {
                     source: ImageSource.gallery,
                     imageQuality: 90,
                   );
-                  if (x != null) widget.onImageChanged?.call(x.path);
+                  if (x != null) {
+                    // Prefer onImagePicked for better cross-platform handling
+                    if (widget.onImagePicked != null) {
+                      widget.onImagePicked!(x);
+                    } else {
+                      widget.onImageChanged?.call(x.path);
+                    }
+                  }
                 },
               ),
-              if ((widget.image ?? '').isNotEmpty)
+              if ((widget.image ?? '').isNotEmpty || widget.imageBytes != null)
                 ListTile(
                   leading: const Icon(Icons.delete_outline),
                   title: const Text('Remove photo'),
                   onTap: () {
                     Navigator.pop(ctx);
-                    widget.onImageChanged?.call(null);
+                    if (widget.onImagePicked != null) {
+                      widget.onImagePicked!(null);
+                    } else {
+                      widget.onImageChanged?.call(null);
+                    }
                   },
                 ),
               const Divider(height: 0),

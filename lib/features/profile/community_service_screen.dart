@@ -17,7 +17,7 @@ class CommunityServiceScreen extends StatefulWidget {
 
 class _CommunityServiceScreenState extends State<CommunityServiceScreen> {
   List<CommunityService> _services = [];
-  int _totalHours = 0;
+  double _totalHours = 0;
   bool _isLoading = true;
 
   @override
@@ -193,7 +193,7 @@ class _CommunityServiceScreenState extends State<CommunityServiceScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '$_totalHours ${_totalHours == 1 ? 'hour' : 'hours'}',
+                                    '${_totalHours.toStringAsFixed(_totalHours == _totalHours.roundToDouble() ? 0 : 1)} ${_totalHours == 1 ? 'hour' : 'hours'}',
                                     style: t.titleLarge?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: cs.onSurface,

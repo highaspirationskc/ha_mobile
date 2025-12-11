@@ -293,8 +293,8 @@ class _BottomSheetCommunityServiceState
         userId: currentUserId,
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
-        hours: _hours,
-        location: null, // Could add location field later
+        hours: _hours.toDouble(),
+        eventDate: _selectedDate,
       );
 
       if (mounted) {

@@ -21,6 +21,7 @@ import '../graphql/graphql_client.dart';
 import '../graphql/documents/queries/queries.dart';
 import '../graphql/documents/mutations/update_user_mutation.dart';
 import '../graphql/documents/mutations/event_mutations.dart';
+import '../graphql/documents/mutations/create_community_service_mutation.dart';
 import 'olympic_season_service.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, guardians, and children
@@ -263,48 +264,185 @@ class ApiService {
       _eventsLastFetched != null &&
       DateTime.now().difference(_eventsLastFetched!).inMinutes < 5;
 
-  /// Creates a new community service entry for a user
+  /// Creates a new community service record via GraphQL
   Future<CommunityService> createCommunityService({
     required String userId,
     required String name,
     required String description,
-    required int hours,
-    String? location,
+    required double hours,
+    required DateTime eventDate,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 800));
+    if (kDebugMode) {
+      print('📝 API: Creating community service record: $name');
+    }
 
-    final communityService = CommunityService(
-      id: 'cs_${DateTime.now().millisecondsSinceEpoch}',
-      name: name,
-      description: description,
-      hours: hours,
-      location: location,
-      createdAt: DateTime.now(),
-    );
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(createCommunityServiceRecordMutation),
+          variables: {
+            'event': name,
+            'description': description.isNotEmpty ? description : null,
+            'eventDate': eventDate.toIso8601String().split('T')[0],
+            'hours': hours,
+          },
+        ),
+      );
 
-    final userServices = _communityServices.putIfAbsent(
-      userId,
-      () => <CommunityService>[],
-    );
-    userServices.add(communityService);
-    changes.value++; // notify listeners
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error creating CS record: ${result.exception}');
+        }
+        throw Exception(
+          'Failed to create community service: ${result.exception}',
+        );
+      }
 
-    return communityService;
+      final payload =
+          result.data?['createCommunityServiceRecord'] as Map<String, dynamic>?;
+      final errors = payload?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception(errors.join(', '));
+      }
+
+      final recordData =
+          payload?['communityServiceRecord'] as Map<String, dynamic>?;
+      if (recordData == null) {
+        throw Exception('No community service record in response');
+      }
+
+      final communityService = CommunityService.fromJson(recordData);
+
+      if (kDebugMode) {
+        print(
+          '✅ API: Created community service record: ${communityService.id}',
+        );
+      }
+
+      // Invalidate cache so next fetch gets fresh data
+      _communityServices.remove(userId);
+      changes.value++; // notify listeners
+
+      return communityService;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception creating community service: $e');
+      }
+      rethrow;
+    }
   }
 
-  /// Gets all community service entries for a user
+  /// Gets all community service records for a user from API
   Future<List<CommunityService>> getCommunityServices({
     required String userId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return List.from(_communityServices[userId] ?? []);
+    if (kDebugMode) {
+      print('🔍 API: Fetching community service records for user: $userId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getMenteeCommunityServiceQuery),
+          variables: {'userId': userId},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error fetching CS records: ${result.exception}',
+          );
+        }
+        return _communityServices[userId] ?? [];
+      }
+
+      final userData = result.data?['user'] as Map<String, dynamic>?;
+      final menteeData = userData?['mentee'] as Map<String, dynamic>?;
+
+      if (menteeData == null) {
+        if (kDebugMode) {
+          print('⚠️ API: No mentee data found for user');
+        }
+        return [];
+      }
+
+      final recordsData =
+          menteeData['communityServiceRecords'] as List<dynamic>? ?? [];
+      final services = recordsData
+          .map(
+            (json) => CommunityService.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+
+      // Sort by event date descending (most recent first)
+      services.sort((a, b) => b.eventDate.compareTo(a.eventDate));
+
+      // Cache the results
+      _communityServices[userId] = services;
+
+      if (kDebugMode) {
+        print('✅ API: Fetched ${services.length} community service records');
+      }
+
+      return services;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching community services: $e');
+      }
+      return _communityServices[userId] ?? [];
+    }
   }
 
-  /// Gets the total community service hours for a user
-  Future<int> getTotalCommunityServiceHours({required String userId}) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final services = _communityServices[userId] ?? [];
-    return services.fold<int>(0, (total, service) => total + service.hours);
+  /// Gets the total community service hours for a user from API
+  Future<double> getTotalCommunityServiceHours({required String userId}) async {
+    if (kDebugMode) {
+      print('🔍 API: Fetching total CS hours for user: $userId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getMenteeCommunityServiceQuery),
+          variables: {'userId': userId},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error fetching CS hours: ${result.exception}');
+        }
+        // Fallback to cached data
+        final cached = _communityServices[userId] ?? [];
+        return cached.fold<double>(0, (total, s) => total + s.hours);
+      }
+
+      final userData = result.data?['user'] as Map<String, dynamic>?;
+      final menteeData = userData?['mentee'] as Map<String, dynamic>?;
+
+      if (menteeData == null) {
+        return 0;
+      }
+
+      final totalHours =
+          (menteeData['totalCommunityServiceHours'] as num?)?.toDouble() ?? 0;
+
+      if (kDebugMode) {
+        print('✅ API: Total CS hours: $totalHours');
+      }
+
+      return totalHours;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching CS hours: $e');
+      }
+      // Fallback to cached data
+      final cached = _communityServices[userId] ?? [];
+      return cached.fold<double>(0, (total, s) => total + s.hours);
+    }
   }
 
   /// Gets mentee data for a user including guardians and mentor

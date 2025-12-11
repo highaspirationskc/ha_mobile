@@ -1,4 +1,5 @@
 // lib/presentation/screens/profile_screen.dart
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,9 +22,11 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   User? _currentUser;
   bool _isLoading = true;
-  String? _imageOverride;
+  String? _imageUrlOverride;
+  Uint8List? _imageBytesOverride;
+  bool _isUploadingAvatar = false;
   int? _colorIndexOverride;
-  int _totalCommunityServiceHours = 0;
+  double _totalCommunityServiceHours = 0;
   int _totalCommunityServiceEvents = 0;
   int _totalAttendance = 0;
   int _totalPoints = 0;
@@ -321,30 +324,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Avatar(
       firstName: u.firstName,
       lastName: u.lastName,
-      image: _imageOverride ?? u.image,
+      image: _imageUrlOverride ?? u.image,
+      imageBytes: _imageBytesOverride,
       colorIndex: _colorIndexOverride ?? u.colorIndex,
       editable: true,
-      onImageChanged: (path) => _handleAvatarChange(path),
+      isLoading: _isUploadingAvatar,
+      onImagePicked: (xFile) => _handleAvatarChange(xFile),
       onColorChanged: (i) => setState(() => _colorIndexOverride = i),
       size: 64,
     );
   }
 
-  Future<void> _handleAvatarChange(String? path) async {
-    if (path == null) {
+  Future<void> _handleAvatarChange(XFile? xFile) async {
+    if (xFile == null) {
       // Remove avatar - just clear local override for now
-      setState(() => _imageOverride = null);
+      setState(() {
+        _imageUrlOverride = null;
+        _imageBytesOverride = null;
+      });
       return;
     }
 
-    // Show loading indicator
-    setState(() => _imageOverride = path);
-
     try {
-      // Read file bytes (works on both web and native)
-      final xFile = XFile(path);
+      // Read file bytes for preview (works on both web and native)
       final bytes = await xFile.readAsBytes();
-      final fileName = path.split('/').last;
+      final fileName = xFile.name;
+
+      // Show preview immediately while uploading
+      setState(() {
+        _imageBytesOverride = bytes;
+        _isUploadingAvatar = true;
+      });
 
       // Upload the new avatar
       final newAvatarUrl = await ApiService.instance.updateUserAvatar(
@@ -355,7 +365,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (mounted) {
         setState(() {
-          _imageOverride = newAvatarUrl;
+          _imageUrlOverride = newAvatarUrl;
+          _imageBytesOverride = null; // Clear bytes, use URL now
+          _isUploadingAvatar = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -367,7 +379,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         // Revert to previous image on error
-        setState(() => _imageOverride = null);
+        setState(() {
+          _imageBytesOverride = null;
+          _isUploadingAvatar = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update avatar: ${e.toString()}'),
