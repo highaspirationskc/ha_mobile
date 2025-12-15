@@ -473,7 +473,7 @@ class _TeamScreenState extends State<TeamScreen>
                 image: mentee.mentee.image,
                 colorIndex: mentee.mentee.colorIndex,
                 size: size - 4, // Subtract border width (2px on each side)
-                editable: false, 
+                editable: false,
               ),
             ),
           ],
@@ -571,8 +571,23 @@ class _TeamScreenState extends State<TeamScreen>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${team.colorName} • ${team.mentorCount} mentors • ${team.menteeCount} mentees',
+                  '${team.mentorCount} mentors • ${team.menteeCount} mentees',
                   style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.volunteer_activism,
+                      size: 12,
+                      color: cs.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${team.totalCommunityServiceHours.toStringAsFixed(1)} CS hours',
+                      style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
                 ),
               ],
             ),

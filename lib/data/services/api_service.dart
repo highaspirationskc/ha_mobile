@@ -14,6 +14,7 @@ import '../../business/user/entities/user_refs.dart';
 import '../../business/mentee_spotlight/entities/mentee_spotlight.dart';
 import '../../business/pulse/entities/pulse.dart';
 import '../../business/leaderboard/entities/leaderboard.dart';
+import '../../business/teams/entities/team.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
 import '../../business/events/entities/event.dart';
 import '../../business/messages/entities/message.dart';
@@ -24,6 +25,7 @@ import '../graphql/documents/queries/queries.dart';
 import '../graphql/documents/mutations/update_user_mutation.dart';
 import '../graphql/documents/mutations/event_mutations.dart';
 import '../graphql/documents/mutations/create_community_service_mutation.dart';
+import '../graphql/documents/mutations/compose_message_mutation.dart';
 import 'olympic_season_service.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, guardians, and children
@@ -89,6 +91,8 @@ class ApiService {
     _inboxLastFetched = null;
     _cachedScoops = null;
     _scoopsLastFetched = null;
+    _cachedTeams = null;
+    _teamsLastFetched = null;
     changes.value++; // notify listeners
   }
 
@@ -572,6 +576,135 @@ class ApiService {
   void clearInboxCache() {
     _cachedInbox = null;
     _inboxLastFetched = null;
+  }
+
+  /// Gets a message thread by ID and marks it as read
+  Future<Message?> getMessageThread(String messageId) async {
+    if (kDebugMode) {
+      print('📬 API: Fetching message thread: $messageId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getMessageThreadQuery),
+          variables: {'messageId': messageId},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error fetching message thread: ${result.exception}',
+          );
+        }
+        return null;
+      }
+
+      final messageData =
+          result.data?['messageThread'] as Map<String, dynamic>?;
+      if (messageData == null) {
+        if (kDebugMode) {
+          print('⚠️ API: No message thread found for ID: $messageId');
+        }
+        return null;
+      }
+
+      final message = Message.fromJson(messageData);
+
+      if (kDebugMode) {
+        print('✅ API: Fetched message thread: ${message.subject}');
+        print('   isRead: ${message.isRead}');
+        print('   Replies: ${message.replies.length}');
+      }
+
+      // Update the cached inbox to mark this message as read
+      if (_cachedInbox != null) {
+        final index = _cachedInbox!.indexWhere((m) => m.id == messageId);
+        if (index >= 0) {
+          _cachedInbox![index] = _cachedInbox![index].copyWith(isRead: true);
+          changes.value++; // Notify listeners that inbox changed
+        }
+      }
+
+      return message;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching message thread: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Gets the count of unread messages
+  int getUnreadCount() {
+    if (_cachedInbox == null) return 0;
+    return _cachedInbox!.where((m) => !m.isRead).length;
+  }
+
+  /// Sends a new message via the composeMessage mutation
+  Future<void> composeMessage({
+    required String subject,
+    required String message,
+    required List<String> recipientIds,
+    String replyMode = 'reply_to_sender',
+    bool support = false,
+  }) async {
+    if (kDebugMode) {
+      print('✉️ API: Composing message...');
+      print('   Subject: $subject');
+      print('   Recipients: $recipientIds');
+    }
+
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(composeMessageMutation),
+          variables: {
+            'input': {
+              'subject': subject,
+              'message': message,
+              'recipientIds': recipientIds,
+              'replyMode': replyMode,
+              'support': support,
+            },
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error composing message: ${result.exception}');
+        }
+        throw Exception('Failed to send message: ${result.exception}');
+      }
+
+      final composeData =
+          result.data?['composeMessage'] as Map<String, dynamic>?;
+      final errors = composeData?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception(errors.join(', '));
+      }
+
+      if (kDebugMode) {
+        final messageData = composeData?['message'] as Map<String, dynamic>?;
+        print('✅ API: Message sent successfully');
+        if (messageData != null) {
+          print('   Message ID: ${messageData['id']}');
+        }
+      }
+
+      // Clear inbox cache so it refetches with the new message
+      clearInboxCache();
+      changes.value++; // notify listeners
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception composing message: $e');
+      }
+      rethrow;
+    }
   }
 
   // ============================================================
@@ -1064,10 +1197,120 @@ class ApiService {
     return pulses.first;
   }
 
+  /// Cache for teams data
+  List<Team>? _cachedTeams;
+  DateTime? _teamsLastFetched;
+
+  /// Gets all teams from the API
+  Future<List<Team>> getTeams({bool forceRefresh = false}) async {
+    // Return cached data if available and not expired (5 min cache)
+    if (!forceRefresh &&
+        _cachedTeams != null &&
+        _teamsLastFetched != null &&
+        DateTime.now().difference(_teamsLastFetched!).inMinutes < 5) {
+      return _cachedTeams!;
+    }
+
+    if (kDebugMode) {
+      print('🏆 API: Fetching teams from API');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getTeamsQuery),
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error fetching teams: ${result.exception}');
+        }
+        // Return cached data if available, otherwise throw
+        if (_cachedTeams != null) return _cachedTeams!;
+        throw Exception('Failed to fetch teams: ${result.exception}');
+      }
+
+      final teamsData = result.data?['teams'] as List<dynamic>? ?? [];
+      final teams = teamsData.map((t) {
+        return Team.fromJson(t as Map<String, dynamic>);
+      }).toList();
+
+      // Sort by totalPoints descending and assign ranks
+      teams.sort((a, b) => b.totalPoints.compareTo(a.totalPoints));
+      final rankedTeams = <Team>[];
+      for (int i = 0; i < teams.length; i++) {
+        rankedTeams.add(teams[i].copyWith(rank: i + 1));
+      }
+
+      if (kDebugMode) {
+        print('✅ API: Fetched ${rankedTeams.length} teams');
+        for (final team in rankedTeams) {
+          print(
+            '   - ${team.name}: ${team.totalPoints} pts, ${team.menteeCount} mentees',
+          );
+        }
+      }
+
+      _cachedTeams = rankedTeams;
+      _teamsLastFetched = DateTime.now();
+      return rankedTeams;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching teams: $e');
+      }
+      // Return cached data if available
+      if (_cachedTeams != null) return _cachedTeams!;
+      rethrow;
+    }
+  }
+
+  /// Clears the teams cache
+  void clearTeamsCache() {
+    _cachedTeams = null;
+    _teamsLastFetched = null;
+  }
+
   /// Gets the leaderboard with all teams info and top 10 mentees by points
   Future<Leaderboard> getLeaderboard() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return getMockLeaderboard();
+    try {
+      final teams = await getTeams();
+
+      // For now, build mentee rankings from team mentees
+      // TODO: Replace with dedicated mentee leaderboard query when available
+      final allMentees = <MenteeRanking>[];
+      for (final team in teams) {
+        for (final mentee in team.mentees) {
+          allMentees.add(
+            MenteeRanking(
+              mentee: mentee,
+              points: 0, // Points per mentee not available in teams query
+              rank: 0,
+              team: TeamSummary(
+                id: team.id,
+                name: team.name,
+                color: team.color,
+                points: team.totalPoints,
+                rank: team.rank,
+              ),
+            ),
+          );
+        }
+      }
+
+      return Leaderboard(
+        teams: teams,
+        topMentees: allMentees.take(10).toList(),
+        lastUpdated: DateTime.now(),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Error building leaderboard, falling back to mock: $e');
+      }
+      // Fallback to mock data if API fails
+      return getMockLeaderboard();
+    }
   }
 
   /// Gets the mentee spotlight

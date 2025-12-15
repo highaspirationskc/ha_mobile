@@ -15,7 +15,8 @@ class Message {
   final String? parentId;
   final String? threadRootId;
   final List<Message> replies;
-  final bool read; // Client-side tracking, not from API
+  final bool
+  isRead; // From API - whether the current user has read this message
 
   const Message({
     required this.id,
@@ -31,7 +32,7 @@ class Message {
     this.parentId,
     this.threadRootId,
     this.replies = const [],
-    this.read = false,
+    this.isRead = false,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -59,6 +60,7 @@ class Message {
               ?.map((r) => Message.fromJson(r as Map<String, dynamic>))
               .toList() ??
           [],
+      isRead: json['isRead'] as bool? ?? false,
     );
   }
 
@@ -77,6 +79,7 @@ class Message {
       'parent': parentId != null ? {'id': parentId} : null,
       'threadRoot': threadRootId != null ? {'id': threadRootId} : null,
       'replies': replies.map((r) => r.toJson()).toList(),
+      'isRead': isRead,
     };
   }
 
@@ -94,7 +97,7 @@ class Message {
     String? parentId,
     String? threadRootId,
     List<Message>? replies,
-    bool? read,
+    bool? isRead,
   }) {
     return Message(
       id: id ?? this.id,
@@ -110,7 +113,7 @@ class Message {
       parentId: parentId ?? this.parentId,
       threadRootId: threadRootId ?? this.threadRootId,
       replies: replies ?? this.replies,
-      read: read ?? this.read,
+      isRead: isRead ?? this.isRead,
     );
   }
 

@@ -1,9 +1,9 @@
-// lib/data/graphql/documents/queries/get_inbox_query.dart
+// lib/data/graphql/documents/queries/get_message_thread_query.dart
 
-/// GraphQL query to fetch the current user's inbox messages
-const String getInboxQuery = r'''
-  query GetInbox {
-    inbox {
+/// GraphQL query to fetch a message thread and mark it as read
+const String getMessageThreadQuery = r'''
+  query GetMessageThread($messageId: ID!) {
+    messageThread(messageId: $messageId) {
       id
       subject
       message
@@ -28,23 +28,28 @@ const String getInboxQuery = r'''
         email
         avatarUrl
       }
-      parent {
-        id
-      }
-      threadRoot {
-        id
-      }
       replies {
         id
+        subject
         message
         isRead
+        isReply
         createdAt
         author {
           id
           firstName
           lastName
           avatarUrl
+          role
         }
+      }
+      parent {
+        id
+        subject
+      }
+      threadRoot {
+        id
+        subject
       }
     }
   }

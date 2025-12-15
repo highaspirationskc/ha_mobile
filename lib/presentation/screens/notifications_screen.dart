@@ -20,6 +20,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _loadMessages();
+    ApiService.instance.changes.addListener(_onApiChange);
+  }
+
+  @override
+  void dispose() {
+    ApiService.instance.changes.removeListener(_onApiChange);
+    super.dispose();
+  }
+
+  void _onApiChange() {
+    // Refresh messages from cache when API changes (e.g., message marked as read)
+    _refreshFromCache();
+  }
+
+  void _refreshFromCache() {
+    // Get the latest cached inbox without forcing a network request
+    final cachedMessages = ApiService.instance.getInbox();
+    cachedMessages.then((messages) {
+      if (mounted) {
+        setState(() {
+          _messages = messages;
+        });
+      }
+    });
   }
 
   Future<void> _loadMessages() async {

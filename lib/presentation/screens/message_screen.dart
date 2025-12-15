@@ -6,23 +6,96 @@ import '../../data/services/api_service.dart';
 import '../../core/theme/brand_colors.dart';
 import '../widgets/chit.dart';
 
-class MessageScreen extends StatelessWidget {
+class MessageScreen extends StatefulWidget {
   final String? messageId;
   const MessageScreen({super.key, this.messageId});
 
   @override
-  Widget build(BuildContext context) {
-    final message = ApiService.instance.getMessageById(messageId ?? '');
-    if (message == null) {
-      return Center(child: Text('Message not found'));
+  State<MessageScreen> createState() => _MessageScreenState();
+}
+
+class _MessageScreenState extends State<MessageScreen> {
+  Message? _message;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessage();
+  }
+
+  Future<void> _loadMessage() async {
+    if (widget.messageId == null) {
+      setState(() {
+        _error = 'No message ID provided';
+        _isLoading = false;
+      });
+      return;
     }
 
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Use getMessageThread to fetch and mark as read
+      final message = await ApiService.instance.getMessageThread(
+        widget.messageId!,
+      );
+
+      if (mounted) {
+        setState(() {
+          _message = message;
+          _isLoading = false;
+          if (message == null) {
+            _error = 'Message not found';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
 
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null || _message == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: cs.error),
+            const SizedBox(height: 16),
+            Text(
+              _error ?? 'Message not found',
+              style: t.bodyLarge?.copyWith(color: cs.error),
+            ),
+            const SizedBox(height: 16),
+            TextButton(onPressed: _loadMessage, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    final message = _message!;
+
     return Container(
       width: double.infinity,
-      color: cs.background,
+      color: cs.surface,
       child: SingleChildScrollView(
         child: Container(
           width: double.infinity,
@@ -67,10 +140,55 @@ class MessageScreen extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
+
+                // Show replies if any
+                if (message.replies.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Divider(color: cs.outlineVariant),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Replies',
+                    style: t.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...message.replies.map(
+                    (reply) => _buildReplyCard(context, reply, cs, t),
+                  ),
+                ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReplyCard(
+    BuildContext context,
+    Message reply,
+    ColorScheme cs,
+    TextTheme t,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAuthorHeader(context, reply, cs, t),
+          const SizedBox(height: 12),
+          Text(
+            reply.message,
+            style: t.bodyMedium?.copyWith(color: cs.onSurface, height: 1.4),
+          ),
+        ],
       ),
     );
   }
@@ -105,11 +223,14 @@ class MessageScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(
-                    authorName,
-                    style: t.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: cs.onSurface,
+                  Flexible(
+                    child: Text(
+                      authorName,
+                      style: t.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (showMentorChip) ...[
@@ -234,7 +355,7 @@ class _AuthorAvatar extends StatelessWidget {
         (l.isNotEmpty ? l.characters.first : '');
 
     return Container(
-      color: Theme.of(context).colorScheme.surfaceVariant,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       alignment: Alignment.center,
       child: Text(
         (initials.isEmpty ? 'U' : initials).toUpperCase(),

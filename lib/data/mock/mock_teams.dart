@@ -17,62 +17,62 @@ UserRef _userToRef(User user) {
 // Mock Teams - one for each color
 final List<Team> mockTeams = [
   // Red Team - Fire Dragons
-  Team(
-    id: 'team_red',
-    name: 'Fire Dragons',
-    color: TeamColor.red,
-    mentors: [
-      _userToRef(mockMentors[1]), // Alex Johnson
-      _userToRef(mockMentors[5]), // Mike Davis
-    ],
-    rank: 1,
-    points: 285,
-    mentorCount: 2,
-    menteeCount: 8,
-  ),
+  // Team(
+  //   id: 'team_red',
+  //   name: 'Fire Dragons',
+  //   color: TeamColor.red,
+  //   mentors: [
+  //     _userToRef(mockMentors[1]), // Alex Johnson
+  //     _userToRef(mockMentors[5]), // Mike Davis
+  //   ],
+  //   rank: 1,
+  //   points: 285,
+  //   mentorCount: 2,
+  //   menteeCount: 8,
+  // ),
 
-  // Green Team - Forest Hawks
-  Team(
-    id: 'team_green',
-    name: 'Forest Hawks',
-    color: TeamColor.green,
-    mentors: [
-      _userToRef(mockMentors[2]), // Maria Garcia
-    ],
-    rank: 3,
-    points: 210,
-    mentorCount: 1,
-    menteeCount: 6,
-  ),
+  // // Green Team - Forest Hawks
+  // Team(
+  //   id: 'team_green',
+  //   name: 'Forest Hawks',
+  //   color: TeamColor.green,
+  //   mentors: [
+  //     _userToRef(mockMentors[2]), // Maria Garcia
+  //   ],
+  //   rank: 3,
+  //   points: 210,
+  //   mentorCount: 1,
+  //   menteeCount: 6,
+  // ),
 
-  // Blue Team - Ocean Wolves
-  Team(
-    id: 'team_blue',
-    name: 'Ocean Wolves',
-    color: TeamColor.blue,
-    mentors: [
-      _userToRef(mockMentors[3]), // David Chen
-      _userToRef(mockMentors[0]), // Sam Rivera (original mentor)
-    ],
-    rank: 2,
-    points: 245,
-    mentorCount: 2,
-    menteeCount: 7,
-  ),
+  // // Blue Team - Ocean Wolves
+  // Team(
+  //   id: 'team_blue',
+  //   name: 'Ocean Wolves',
+  //   color: TeamColor.blue,
+  //   mentors: [
+  //     _userToRef(mockMentors[3]), // David Chen
+  //     _userToRef(mockMentors[0]), // Sam Rivera (original mentor)
+  //   ],
+  //   rank: 2,
+  //   points: 245,
+  //   mentorCount: 2,
+  //   menteeCount: 7,
+  // ),
 
-  // Yellow Team - Lightning Eagles
-  Team(
-    id: 'team_yellow',
-    name: 'Lightning Eagles',
-    color: TeamColor.yellow,
-    mentors: [
-      _userToRef(mockMentors[4]), // Sarah Wright
-    ],
-    rank: 4,
-    points: 175,
-    mentorCount: 1,
-    menteeCount: 5,
-  ),
+  // // Yellow Team - Lightning Eagles
+  // Team(
+  //   id: 'team_yellow',
+  //   name: 'Lightning Eagles',
+  //   color: TeamColor.yellow,
+  //   mentors: [
+  //     _userToRef(mockMentors[4]), // Sarah Wright
+  //   ],
+  //   rank: 4,
+  //   points: 175,
+  //   mentorCount: 1,
+  //   menteeCount: 5,
+  // ),
 ];
 
 // Quick lookup by team id

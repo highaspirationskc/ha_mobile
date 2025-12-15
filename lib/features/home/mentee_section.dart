@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../business/user/entities/user_base.dart';
 import '../../core/session.dart';
 import '../../data/services/api_service.dart';
+import '../mentees/mentee_screen.dart';
 import 'widgets/mentee_list_items.dart';
 
 class MenteeSection extends StatefulWidget {
@@ -97,7 +98,11 @@ class _MenteeSectionState extends State<MenteeSection> {
                 colorIndex: mentee.colorIndex,
                 points: 0, // TODO: Fetch points from leaderboard/eventLogs
                 onTap: () {
-                  // TODO: Navigate to mentee detail screen
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => MenteeScreen(mentee: mentee),
+                    ),
+                  );
                 },
               );
             },

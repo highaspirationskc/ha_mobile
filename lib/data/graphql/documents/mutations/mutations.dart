@@ -4,3 +4,4 @@
 export 'login_mutation.dart';
 export 'logout_mutation.dart';
 export 'create_community_service_mutation.dart';
+export 'compose_message_mutation.dart';

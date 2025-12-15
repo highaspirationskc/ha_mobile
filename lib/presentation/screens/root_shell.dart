@@ -58,6 +58,9 @@ class _RootShellState extends State<RootShell> {
   // Current user data
   User? _currentUser;
 
+  // Unread messages count
+  int _unreadCount = 0;
+
   // deferred setState to avoid setState-during-build
   bool _pending = false;
   void _deferRebuild() {
@@ -74,6 +77,28 @@ class _RootShellState extends State<RootShell> {
   void initState() {
     super.initState();
     _loadCurrentUser();
+    _loadUnreadCount();
+    ApiService.instance.changes.addListener(_onApiChange);
+  }
+
+  @override
+  void dispose() {
+    ApiService.instance.changes.removeListener(_onApiChange);
+    super.dispose();
+  }
+
+  void _onApiChange() {
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    // Fetch inbox if not cached, then get unread count
+    await ApiService.instance.getInbox();
+    if (mounted) {
+      setState(() {
+        _unreadCount = ApiService.instance.getUnreadCount();
+      });
+    }
   }
 
   Future<void> _loadCurrentUser() async {
@@ -417,8 +442,8 @@ class _RootShellState extends State<RootShell> {
         final hideAppBar = _shouldHideAppBar(currentRoute);
         final hideNavBar = _shouldHideNavBar(currentRoute);
 
-        // Unread count - for now, always show red dot (assume unread messages)
-        const unreadCount = 1;
+        // Unread count from inbox
+        final unreadCount = _unreadCount;
 
         // Get current user for avatar
         final user = _currentUser ?? currentUser;

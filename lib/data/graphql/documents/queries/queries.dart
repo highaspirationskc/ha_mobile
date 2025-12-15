@@ -9,3 +9,5 @@ export 'get_user_mentee_data_query.dart';
 export 'get_mentee_community_service_query.dart';
 export 'get_inbox_query.dart';
 export 'get_saturday_scoops_query.dart';
+export 'get_teams_query.dart';
+export 'get_message_thread_query.dart';

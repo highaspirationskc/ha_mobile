@@ -1,5 +1,6 @@
 // lib/presentation/widgets/message_bottom_sheet.dart
 import 'package:flutter/material.dart';
+import '../../data/services/api_service.dart';
 
 class MessageBottomSheet extends StatefulWidget {
   final String? recipientName;
@@ -16,6 +17,7 @@ class _MessageBottomSheetState extends State<MessageBottomSheet> {
   final _toController = TextEditingController();
   final _subjectController = TextEditingController();
   final _messageController = TextEditingController();
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -34,25 +36,52 @@ class _MessageBottomSheetState extends State<MessageBottomSheet> {
     super.dispose();
   }
 
-  void _handleSend() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Log the data
-      debugPrint('=== New Message ===');
-      debugPrint('To: ${_toController.text}');
-      debugPrint('Recipient ID: ${widget.recipientId}');
-      debugPrint('Subject: ${_subjectController.text}');
-      debugPrint('Message: ${_messageController.text}');
-      debugPrint('==================');
+  Future<void> _handleSend() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (widget.recipientId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No recipient selected'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSending = true);
+
+    try {
+      await ApiService.instance.composeMessage(
+        subject: _subjectController.text.trim(),
+        message: _messageController.text.trim(),
+        recipientIds: [widget.recipientId!],
+      );
+
+      if (!mounted) return;
 
       // Show success message and close
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Message sent successfully'),
-          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
         ),
       );
 
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true); // Return true to indicate success
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 
@@ -92,11 +121,20 @@ class _MessageBottomSheetState extends State<MessageBottomSheet> {
                   ),
                   const Spacer(),
                   // Send button
-                  IconButton(
-                    onPressed: _handleSend,
-                    icon: const Icon(Icons.send),
-                    tooltip: 'Send',
-                  ),
+                  _isSending
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : IconButton(
+                          onPressed: _handleSend,
+                          icon: const Icon(Icons.send),
+                          tooltip: 'Send',
+                        ),
                 ],
               ),
             ),

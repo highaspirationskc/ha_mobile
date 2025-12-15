@@ -23,11 +23,10 @@ class ListTileMessage extends StatelessWidget {
     final showGuardianChip = _isGuardian(author);
     final showStaffChip = _isStaffOrAdmin(author);
     final rel = _relativeTime(message.updatedAt ?? message.createdAt);
-    // Note: message.read is available when we need to implement read/unread status
+    final isRead = message.isRead;
 
     return Material(
-      // All messages treated as unread for now (white background)
-      color: Colors.white, // isRead ? cs.surface : Colors.white,
+      color: isRead ? cs.surface : Colors.white,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

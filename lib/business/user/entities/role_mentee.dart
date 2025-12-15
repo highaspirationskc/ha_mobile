@@ -48,18 +48,15 @@ class TeamSummary {
 class MenteeData {
   final String userId;
 
-  // Relations
-  final List<UserRef>? parents; // ?
-  final UserRef? mentor; // ?
-  final TeamRef? team; // ? (legacy field)
+  final List<UserRef>? parents;
+  final UserRef? mentor;
+  final TeamRef? team; 
 
-  // Team information
   final String? teamId;
   final TeamSummary? teamSummary;
 
-  // Attendance
-  final int totalAttendance; // Total Attendance
-  final int currentStreak; // Current Attendance Streak
+  final int totalAttendance;
+  final int currentStreak;
 
   const MenteeData({
     required this.userId,
