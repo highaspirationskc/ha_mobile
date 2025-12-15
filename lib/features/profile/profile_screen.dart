@@ -12,6 +12,7 @@ import '../../data/services/auth_service.dart';
 import '../../presentation/widgets/avatar.dart';
 import '../../presentation/screens/login_screen.dart';
 import 'widgets/community_service_button.dart';
+import 'widgets/grade_cards_tile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -30,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _totalCommunityServiceEvents = 0;
   int _totalAttendance = 0;
   int _totalPoints = 0;
+  int _totalGradeCards = 0;
   UserRef? _mentor;
   List<UserRef> _guardians = [];
 
@@ -67,6 +69,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final attendance = await ApiService.instance.getTotalAttendance(
         userId: currentUserId,
       );
+      final gradeCardCount = await ApiService.instance.getGradeCardCount(
+        userId: currentUserId,
+      );
 
       if (mounted) {
         setState(() {
@@ -76,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _totalCommunityServiceHours = hours;
           _totalCommunityServiceEvents = services.length;
           _totalAttendance = attendance;
+          _totalGradeCards = gradeCardCount;
           _totalPoints =
               attendance +
               services.length; // Points = attendance + community service events
@@ -248,6 +254,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       totalHours: _totalCommunityServiceHours,
                       totalEvents: _totalCommunityServiceEvents,
                     ),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 72,
+                      color: cs.outlineVariant.withOpacity(0.3),
+                    ),
+                    GradeCardsTile(totalCards: _totalGradeCards),
                     Divider(
                       height: 1,
                       thickness: 1,

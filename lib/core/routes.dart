@@ -12,6 +12,7 @@ class AppRoutes {
   static const checkInScanner = '/check-in';
   static const menteesRoot = '/mentees';
   static const communityService = '/community-service';
+  static const gradeCards = '/grade-cards';
   static const pulses = '/pulses';
   static const team = '/team';
 }

@@ -47,10 +47,11 @@ class TeamSummary {
 /// Role-specific fields for a Mentee (keyed by the same userId).
 class MenteeData {
   final String userId;
+  final String menteeId; // The mentee record ID (different from userId)
 
   final List<UserRef>? parents;
   final UserRef? mentor;
-  final TeamRef? team; 
+  final TeamRef? team;
 
   final String? teamId;
   final TeamSummary? teamSummary;
@@ -60,6 +61,7 @@ class MenteeData {
 
   const MenteeData({
     required this.userId,
+    required this.menteeId,
     this.parents,
     this.mentor,
     this.team,
@@ -70,6 +72,7 @@ class MenteeData {
   });
 
   MenteeData copyWith({
+    String? menteeId,
     List<UserRef>? parents,
     UserRef? mentor,
     TeamRef? team,
@@ -80,6 +83,7 @@ class MenteeData {
   }) {
     return MenteeData(
       userId: userId,
+      menteeId: menteeId ?? this.menteeId,
       parents: parents ?? this.parents,
       mentor: mentor ?? this.mentor,
       team: team ?? this.team,

@@ -8,6 +8,8 @@ import '../../data/services/api_service.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../presentation/widgets/avatar.dart';
 import '../../presentation/widgets/message_bottom_sheet.dart';
+import '../../presentation/widgets/grade_cards_screen.dart';
+import '../../core/session.dart';
 
 class MenteeScreen extends StatefulWidget {
   final User mentee;
@@ -21,6 +23,7 @@ class MenteeScreen extends StatefulWidget {
 class _MenteeScreenState extends State<MenteeScreen> {
   MenteeData? _menteeData;
   bool _isLoading = true;
+  int _gradeCardCount = 0;
 
   @override
   void initState() {
@@ -35,9 +38,13 @@ class _MenteeScreenState extends State<MenteeScreen> {
       final data = await ApiService.instance.getMenteeData(
         userId: widget.mentee.id,
       );
+      final gradeCardCount = await ApiService.instance.getGradeCardCount(
+        userId: widget.mentee.id,
+      );
 
       setState(() {
         _menteeData = data;
+        _gradeCardCount = gradeCardCount;
         _isLoading = false;
       });
     } catch (e) {
@@ -219,6 +226,34 @@ class _MenteeScreenState extends State<MenteeScreen> {
                     ],
                   ),
                 ),
+
+              // Stats Section (Grade Cards)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Stats',
+                      style: t.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: cs.outlineVariant.withOpacity(0.5),
+                  ),
+                  _buildGradeCardsTile(cs, t),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: cs.outlineVariant.withOpacity(0.5),
+                  ),
+                ],
+              ),
             ],
 
             const SizedBox(height: 32),
@@ -367,6 +402,66 @@ class _MenteeScreenState extends State<MenteeScreen> {
               onPressed: () => _makePhoneCall(context, userRef.phone),
             )
           : null,
+    );
+  }
+
+  Widget _buildGradeCardsTile(ColorScheme cs, TextTheme t) {
+    // Check if current user is a guardian (parent) - they can edit
+    final isGuardian = currentUserKind.value == CurrentUserKind.parent;
+
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => GradeCardsScreen(
+              menteeUserId: widget.mentee.id,
+              menteeId: _menteeData?.menteeId,
+              menteeName: widget.mentee.firstName ?? 'Mentee',
+              canEdit: isGuardian, // Only guardians can add/delete
+            ),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Grade Cards Icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(Icons.school_outlined, color: cs.primary, size: 24),
+            ),
+            const SizedBox(width: 16),
+            // Grade Cards Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Grade Cards',
+                    style: t.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$_gradeCardCount ${_gradeCardCount == 1 ? 'card' : 'cards'}',
+                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            // Arrow Icon
+            Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
+          ],
+        ),
+      ),
     );
   }
 }

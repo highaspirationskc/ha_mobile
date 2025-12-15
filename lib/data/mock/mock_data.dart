@@ -180,6 +180,7 @@ final User mockParent = User(
 /// Role data
 final MenteeData mockMenteeData = MenteeData(
   userId: mockMentee.id,
+  menteeId: 'mentee_${mockMentee.id}', // Mock mentee record ID
   parents: [
     UserRef(
       id: mockParent.id,

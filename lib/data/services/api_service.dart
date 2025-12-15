@@ -6,6 +6,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../../business/community_service/entities/community_service.dart';
+import '../../business/grade_cards/entities/grade_card.dart';
 import '../../business/user/entities/role_mentee.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_role.dart';
@@ -26,6 +27,8 @@ import '../graphql/documents/mutations/update_user_mutation.dart';
 import '../graphql/documents/mutations/event_mutations.dart';
 import '../graphql/documents/mutations/create_community_service_mutation.dart';
 import '../graphql/documents/mutations/compose_message_mutation.dart';
+import '../graphql/documents/mutations/create_grade_card_mutation.dart';
+import '../graphql/documents/mutations/delete_grade_card_mutation.dart';
 import 'olympic_season_service.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, guardians, and children
@@ -503,6 +506,234 @@ class ApiService {
   }
 
   // ============================================================
+  // GRADE CARDS
+  // ============================================================
+
+  Map<String, List<GradeCard>> _cachedGradeCards = {};
+  Map<String, DateTime> _gradeCardsLastFetched = {};
+
+  /// Fetches grade cards for a mentee
+  Future<List<GradeCard>> getGradeCards({
+    required String userId,
+    bool forceRefresh = false,
+  }) async {
+    // Return cached data if valid and not forcing refresh
+    final cachedForUser = _cachedGradeCards[userId];
+    final lastFetchedForUser = _gradeCardsLastFetched[userId];
+    if (!forceRefresh &&
+        cachedForUser != null &&
+        lastFetchedForUser != null &&
+        DateTime.now().difference(lastFetchedForUser).inMinutes < 5) {
+      return cachedForUser;
+    }
+
+    if (kDebugMode) {
+      print('📚 API: Fetching grade cards for user: $userId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getMenteeGradeCardsQuery),
+          variables: {'userId': userId},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error fetching grade cards: ${result.exception}',
+          );
+        }
+        return _cachedGradeCards[userId] ?? [];
+      }
+
+      final menteeData =
+          result.data?['user']?['mentee'] as Map<String, dynamic>?;
+      if (menteeData == null) {
+        if (kDebugMode) {
+          print('⚠️ API: No mentee data found for grade cards');
+        }
+        return [];
+      }
+
+      final gradeCardsData = menteeData['gradeCards'] as List<dynamic>? ?? [];
+      final gradeCards = gradeCardsData
+          .map((json) => GradeCard.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // Sort by createdAt descending (newest first)
+      gradeCards.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      _cachedGradeCards[userId] = gradeCards;
+      _gradeCardsLastFetched[userId] = DateTime.now();
+
+      if (kDebugMode) {
+        print(
+          '✅ API: Fetched ${gradeCards.length} grade cards for user $userId',
+        );
+      }
+
+      return gradeCards;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching grade cards: $e');
+      }
+      return _cachedGradeCards[userId] ?? [];
+    }
+  }
+
+  /// Gets the total number of grade cards for a mentee
+  Future<int> getGradeCardCount({required String userId}) async {
+    final gradeCards = await getGradeCards(userId: userId);
+    return gradeCards.length;
+  }
+
+  /// Creates a new grade card for a mentee
+  /// First uploads the image, then creates the grade card record
+  Future<GradeCard> createGradeCard({
+    required String menteeId,
+    required List<int> imageBytes,
+    required String fileName,
+    String? description,
+  }) async {
+    if (kDebugMode) {
+      print('📚 API: Creating grade card for mentee: $menteeId');
+    }
+
+    try {
+      // Step 1: Upload the image
+      final uploadResult = await uploadMedia(
+        bytes: imageBytes,
+        fileName: fileName,
+        category: 'grade_card',
+      );
+
+      if (kDebugMode) {
+        print('📚 API: Image uploaded, mediumId: ${uploadResult.id}');
+      }
+
+      // Step 2: Create the grade card record
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(createGradeCardMutation),
+          variables: {
+            'input': {
+              'menteeId': menteeId,
+              'mediumId': uploadResult.id.toString(),
+              if (description != null && description.isNotEmpty)
+                'description': description,
+            },
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error creating grade card: ${result.exception}',
+          );
+        }
+        throw Exception('Failed to create grade card: ${result.exception}');
+      }
+
+      final data = result.data?['createGradeCard'] as Map<String, dynamic>?;
+      final errors = data?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception('Failed to create grade card: ${errors.join(', ')}');
+      }
+
+      final gradeCardData = data?['gradeCard'] as Map<String, dynamic>?;
+      if (gradeCardData == null) {
+        throw Exception('No grade card data returned');
+      }
+
+      final gradeCard = GradeCard.fromJson(gradeCardData);
+
+      if (kDebugMode) {
+        print('✅ API: Grade card created successfully - ID: ${gradeCard.id}');
+      }
+
+      // Clear cache for this mentee to force refresh
+      _cachedGradeCards.remove(menteeId);
+      _gradeCardsLastFetched.remove(menteeId);
+
+      // Notify listeners
+      changes.value++;
+
+      return gradeCard;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception creating grade card: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Clears the grade cards cache
+  void clearGradeCardsCache() {
+    _cachedGradeCards.clear();
+    _gradeCardsLastFetched.clear();
+  }
+
+  /// Deletes a grade card
+  Future<bool> deleteGradeCard({
+    required String gradeCardId,
+    required String userId,
+  }) async {
+    if (kDebugMode) {
+      print('🗑️ API: Deleting grade card: $gradeCardId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(deleteGradeCardMutation),
+          variables: {'id': gradeCardId},
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error deleting grade card: ${result.exception}',
+          );
+        }
+        throw Exception('Failed to delete grade card: ${result.exception}');
+      }
+
+      final data = result.data?['deleteGradeCard'] as Map<String, dynamic>?;
+      final success = data?['success'] as bool? ?? false;
+      final errors = data?['errors'] as List<dynamic>?;
+
+      if (!success || (errors != null && errors.isNotEmpty)) {
+        final errorMsg = errors?.join(', ') ?? 'Unknown error';
+        throw Exception('Failed to delete grade card: $errorMsg');
+      }
+
+      if (kDebugMode) {
+        print('✅ API: Grade card deleted successfully');
+      }
+
+      // Clear cache for this user to force refresh
+      _cachedGradeCards.remove(userId);
+      _gradeCardsLastFetched.remove(userId);
+
+      // Notify listeners
+      changes.value++;
+
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception deleting grade card: $e');
+      }
+      rethrow;
+    }
+  }
+
+  // ============================================================
   // INBOX / MESSAGES
   // ============================================================
 
@@ -888,14 +1119,18 @@ class ApiService {
         }
       }
 
+      // Get the mentee ID from the mentee record
+      final menteeId = menteeData['id'].toString();
+
       if (kDebugMode) {
         print(
-          '✅ API: Found ${parents.length} guardians and ${mentor != null ? 1 : 0} mentor',
+          '✅ API: Found mentee ID: $menteeId, ${parents.length} guardians and ${mentor != null ? 1 : 0} mentor',
         );
       }
 
       return MenteeData(
         userId: userId,
+        menteeId: menteeId,
         parents: parents.isNotEmpty ? parents : null,
         mentor: mentor,
         totalAttendance: 0,
