@@ -55,7 +55,8 @@ class User {
       email: json['email'] as String?,
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
-      phone: json['phone'] as String?,
+      // Support both 'phone' and 'phoneNumber' from API
+      phone: (json['phone'] ?? json['phoneNumber']) as String?,
       // Support both 'image' and 'avatarUrl' from API
       image: (json['image'] ?? json['avatarUrl']) as String?,
       colorIndex: json['colorIndex'] as int?,

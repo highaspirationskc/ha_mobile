@@ -1098,6 +1098,7 @@ class ApiService {
             firstName: guardianUserData['firstName'] as String?,
             lastName: guardianUserData['lastName'] as String?,
             email: guardianUserData['email'] as String?,
+            phone: guardianUserData['phoneNumber'] as String?,
             image: guardianUserData['avatarUrl'] as String?,
           );
         }).toList();
@@ -1114,6 +1115,7 @@ class ApiService {
             firstName: mentorUserData['firstName'] as String?,
             lastName: mentorUserData['lastName'] as String?,
             email: mentorUserData['email'] as String?,
+            phone: mentorUserData['phoneNumber'] as String?,
             image: mentorUserData['avatarUrl'] as String?,
           );
         }
@@ -1184,6 +1186,7 @@ class ApiService {
         email: userData['email'] as String,
         firstName: userData['firstName'] as String?,
         lastName: userData['lastName'] as String?,
+        phone: userData['phoneNumber'] as String?,
         image: userData['avatarUrl'] as String?,
         roles: userData['role'] != null
             ? {UserRole.fromString(userData['role'] as String)}
@@ -1206,6 +1209,7 @@ class ApiService {
               firstName: mentorUserData['firstName'] as String?,
               lastName: mentorUserData['lastName'] as String?,
               email: mentorUserData['email'] as String?,
+              phone: mentorUserData['phoneNumber'] as String?,
               image: mentorUserData['avatarUrl'] as String?,
             );
             if (kDebugMode) {
@@ -1224,6 +1228,7 @@ class ApiService {
               firstName: guardianUserData['firstName'] as String?,
               lastName: guardianUserData['lastName'] as String?,
               email: guardianUserData['email'] as String?,
+              phone: guardianUserData['phoneNumber'] as String?,
               image: guardianUserData['avatarUrl'] as String?,
             );
           }).toList();
@@ -1246,6 +1251,7 @@ class ApiService {
               firstName: childUserData['firstName'] as String?,
               lastName: childUserData['lastName'] as String?,
               email: childUserData['email'] as String?,
+              phone: childUserData['phoneNumber'] as String?,
               image: childUserData['avatarUrl'] as String?,
             );
           }).toList();
@@ -2017,6 +2023,70 @@ class ApiService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ API: Exception updating user avatar: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update user profile information
+  /// Returns the updated user data on success
+  Future<Map<String, dynamic>> updateUserProfile({
+    required String userId,
+    String? email,
+    String? firstName,
+    String? lastName,
+    String? phoneNumber,
+  }) async {
+    if (kDebugMode) {
+      print('👤 API: Updating profile for user: $userId');
+    }
+
+    try {
+      final input = <String, dynamic>{'id': userId};
+      if (email != null) input['email'] = email;
+      if (firstName != null) input['firstName'] = firstName;
+      if (lastName != null) input['lastName'] = lastName;
+      if (phoneNumber != null) input['phoneNumber'] = phoneNumber;
+
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(updateUserMutation),
+          variables: {'input': input},
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '❌ API: GraphQL error updating user profile: ${result.exception}',
+          );
+        }
+        throw Exception('Failed to update user profile: ${result.exception}');
+      }
+
+      final updateData = result.data?['updateUser'] as Map<String, dynamic>?;
+      final errors = updateData?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception('Failed to update profile: ${errors.join(', ')}');
+      }
+
+      final userData = updateData?['user'] as Map<String, dynamic>?;
+      if (userData == null) {
+        throw Exception('No user data returned');
+      }
+
+      if (kDebugMode) {
+        print('✅ API: Profile updated successfully');
+      }
+
+      // Notify listeners that user data has changed
+      changes.value++;
+
+      return userData;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception updating user profile: $e');
       }
       rethrow;
     }

@@ -13,6 +13,7 @@ const String getFamilyMembersQuery = r'''
         email
         firstName
         lastName
+        phoneNumber
         avatarUrl
         role
       }
@@ -21,6 +22,7 @@ const String getFamilyMembersQuery = r'''
         email
         firstName
         lastName
+        phoneNumber
         avatarUrl
         role
       }
@@ -41,6 +43,7 @@ const String getFamilyMemberQuery = r'''
         email
         firstName
         lastName
+        phoneNumber
         avatarUrl
         role
       }
@@ -49,6 +52,7 @@ const String getFamilyMemberQuery = r'''
         email
         firstName
         lastName
+        phoneNumber
         avatarUrl
         role
       }

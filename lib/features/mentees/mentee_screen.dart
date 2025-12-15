@@ -380,28 +380,69 @@ class _MenteeScreenState extends State<MenteeScreen> {
     required ColorScheme cs,
     required TextTheme t,
   }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Avatar(
-        firstName: userRef.firstName,
-        lastName: userRef.lastName,
-        image: userRef.image,
-        size: 48,
+    final hasPhone = userRef.phone != null && userRef.phone!.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Avatar(
+            firstName: userRef.firstName,
+            lastName: userRef.lastName,
+            image: userRef.image,
+            size: 48,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  userRef.displayName,
+                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          // Action icons
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Message icon
+              IconButton(
+                icon: Icon(Icons.mail_outline, color: kHAPrimary, size: 22),
+                onPressed: () => _messageContact(context, userRef),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
+              // Phone icon (only if phone available)
+              if (hasPhone)
+                IconButton(
+                  icon: Icon(Icons.phone, color: kHAPrimary, size: 22),
+                  onPressed: () => _makePhoneCall(context, userRef.phone),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
-      title: Text(
-        label,
-        style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-      ),
-      subtitle: Text(
-        userRef.displayName,
-        style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-      ),
-      trailing: userRef.phone != null && userRef.phone!.isNotEmpty
-          ? IconButton(
-              icon: Icon(Icons.phone, color: cs.primary),
-              onPressed: () => _makePhoneCall(context, userRef.phone),
-            )
-          : null,
+    );
+  }
+
+  void _messageContact(BuildContext context, UserRef userRef) {
+    showMessageBottomSheet(
+      context,
+      recipientName: userRef.displayName,
+      recipientId: userRef.id,
     );
   }
 

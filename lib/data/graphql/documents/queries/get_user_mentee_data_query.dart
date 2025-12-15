@@ -20,6 +20,7 @@ const String getUserMenteeDataQuery = r'''
             firstName
             lastName
             email
+            phoneNumber
             avatarUrl
           }
         }
@@ -30,6 +31,7 @@ const String getUserMenteeDataQuery = r'''
             firstName
             lastName
             email
+            phoneNumber
             avatarUrl
           }
         }

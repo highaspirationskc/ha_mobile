@@ -8,6 +8,7 @@ const String getCurrentUserQuery = r'''
       email
       firstName
       lastName
+      phoneNumber
       avatarUrl
       role
       mentee {
@@ -19,6 +20,7 @@ const String getCurrentUserQuery = r'''
             firstName
             lastName
             email
+            phoneNumber
             avatarUrl
           }
         }
@@ -29,6 +31,7 @@ const String getCurrentUserQuery = r'''
             firstName
             lastName
             email
+            phoneNumber
             avatarUrl
           }
         }
@@ -42,6 +45,7 @@ const String getCurrentUserQuery = r'''
             firstName
             lastName
             email
+            phoneNumber
             avatarUrl
           }
         }

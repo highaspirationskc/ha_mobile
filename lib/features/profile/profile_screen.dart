@@ -1,16 +1,16 @@
 // lib/presentation/screens/profile_screen.dart
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/session.dart';
+import '../../core/routes.dart';
+import '../../core/theme/brand_colors.dart';
+import '../../core/utils/phone_formatter.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_refs.dart';
 import '../../data/services/api_service.dart';
-import '../../data/services/auth_service.dart';
 import '../../presentation/widgets/avatar.dart';
-import '../../presentation/screens/login_screen.dart';
+import '../../presentation/widgets/message_bottom_sheet.dart';
 import 'widgets/community_service_button.dart';
 import 'widgets/grade_cards_tile.dart';
 
@@ -23,13 +23,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   User? _currentUser;
   bool _isLoading = true;
-  String? _imageUrlOverride;
-  Uint8List? _imageBytesOverride;
-  bool _isUploadingAvatar = false;
-  int? _colorIndexOverride;
   double _totalCommunityServiceHours = 0;
   int _totalCommunityServiceEvents = 0;
-  int _totalAttendance = 0;
+  // TODO: Re-enable when attendance is ready
+  // int _totalAttendance = 0;
   int _totalPoints = 0;
   int _totalGradeCards = 0;
   UserRef? _mentor;
@@ -80,7 +77,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _guardians = currentUserData.guardians;
           _totalCommunityServiceHours = hours;
           _totalCommunityServiceEvents = services.length;
-          _totalAttendance = attendance;
+          // TODO: Re-enable when attendance is ready
+          // _totalAttendance = attendance;
           _totalGradeCards = gradeCardCount;
           _totalPoints =
               attendance +
@@ -113,7 +111,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 32),
+              // Settings icon in top right
+              Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 8),
+                  child: IconButton(
+                    icon: Icon(Icons.settings_outlined, color: cs.onSurface),
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).pushNamed(AppRoutes.accountSettings);
+                    },
+                    tooltip: 'Account Settings',
+                  ),
+                ),
+              ),
 
               // Large Avatar
               _buildAvatar(u, cs, t),
@@ -131,6 +144,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   u.email!,
                   style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
+                ),
+
+              // Phone
+              if (u.phone != null && u.phone!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    PhoneFormatter.format(u.phone),
+                    style: t.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
+                  ),
                 ),
 
               // Points (only for mentees)
@@ -243,13 +266,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       thickness: 1,
                       color: cs.outlineVariant.withOpacity(0.5),
                     ),
-                    _buildAttendanceTile(context, cs, t),
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      indent: 72,
-                      color: cs.outlineVariant.withOpacity(0.3),
-                    ),
+                    // TODO: Re-enable attendance tile when ready
+                    // _buildAttendanceTile(context, cs, t),
+                    // Divider(
+                    //   height: 1,
+                    //   thickness: 1,
+                    //   indent: 72,
+                    //   color: cs.outlineVariant.withOpacity(0.3),
+                    // ),
                     CommunityServiceTile(
                       totalHours: _totalCommunityServiceHours,
                       totalEvents: _totalCommunityServiceEvents,
@@ -269,23 +293,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
 
-              const SizedBox(height: 32),
-
-              // Log Out Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: OutlinedButton.icon(
-                  onPressed: () => _handleLogOut(context),
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Log Out'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: cs.error,
-                    side: BorderSide(color: cs.error),
-                    minimumSize: const Size(double.infinity, 48),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 100), // Space for floating nav bar
             ],
           ),
@@ -294,178 +301,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _handleLogOut(BuildContext context) async {
-    // Show confirmation dialog
-    final shouldLogOut = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogOut == true && context.mounted) {
-      // Perform logout via AuthService
-      await AuthService.instance.logout();
-      clearAuthenticatedUser();
-
-      // Navigate to login screen and clear navigation stack
-      // Use Navigator.of(context, rootNavigator: true) to ensure we're using the root navigator
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-    }
-  }
-
   Widget _buildAvatar(User u, ColorScheme cs, TextTheme t) {
     return Avatar(
       firstName: u.firstName,
       lastName: u.lastName,
-      image: _imageUrlOverride ?? u.image,
-      imageBytes: _imageBytesOverride,
-      colorIndex: _colorIndexOverride ?? u.colorIndex,
-      editable: true,
-      isLoading: _isUploadingAvatar,
-      onImagePicked: (xFile) => _handleAvatarChange(xFile),
-      onColorChanged: (i) => setState(() => _colorIndexOverride = i),
+      image: u.image,
+      colorIndex: u.colorIndex,
+      editable: false,
       size: 64,
     );
-  }
-
-  Future<void> _handleAvatarChange(XFile? xFile) async {
-    if (xFile == null) {
-      // Remove avatar - just clear local override for now
-      setState(() {
-        _imageUrlOverride = null;
-        _imageBytesOverride = null;
-      });
-      return;
-    }
-
-    try {
-      // Read file bytes for preview (works on both web and native)
-      final bytes = await xFile.readAsBytes();
-      final fileName = xFile.name;
-
-      // Show preview immediately while uploading
-      setState(() {
-        _imageBytesOverride = bytes;
-        _isUploadingAvatar = true;
-      });
-
-      // Upload the new avatar
-      final newAvatarUrl = await ApiService.instance.updateUserAvatar(
-        userId: currentUserId,
-        imageBytes: bytes,
-        fileName: fileName.isNotEmpty ? fileName : 'avatar.jpg',
-      );
-
-      if (mounted) {
-        setState(() {
-          _imageUrlOverride = newAvatarUrl;
-          _imageBytesOverride = null; // Clear bytes, use URL now
-          _isUploadingAvatar = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Avatar updated successfully!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        // Revert to previous image on error
-        setState(() {
-          _imageBytesOverride = null;
-          _isUploadingAvatar = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update avatar: ${e.toString()}'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
   }
 
   Widget _buildMentorTile(BuildContext context, ColorScheme cs, TextTheme t) {
     final phoneNumber = _mentor!.phone ?? '';
 
-    return InkWell(
-      onTap: phoneNumber.isNotEmpty ? () => _callMentor(context) : null,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // Mentor Avatar
-            Avatar(
-              firstName: _mentor!.firstName,
-              lastName: _mentor!.lastName,
-              image: _mentor!.image,
-              colorIndex: _mentor!.colorIndex,
-              size: 48,
-              editable: false,
-            ),
-            const SizedBox(width: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          // Mentor Avatar
+          Avatar(
+            firstName: _mentor!.firstName,
+            lastName: _mentor!.lastName,
+            image: _mentor!.image,
+            colorIndex: _mentor!.colorIndex,
+            size: 48,
+            editable: false,
+          ),
+          const SizedBox(width: 16),
 
-            // Mentor Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mentor',
-                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+          // Mentor Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mentor',
+                  style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _mentor!.displayName,
+                  style: t.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _mentor!.displayName,
-                    style: t.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
 
-            // Phone Number (tappable)
-            if (phoneNumber.isNotEmpty)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    phoneNumber,
-                    style: t.bodyMedium?.copyWith(
-                      color: cs.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.phone, color: cs.primary, size: 20),
-                ],
+          // Action icons
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Message icon
+              IconButton(
+                icon: Icon(Icons.mail_outline, color: kHAPrimary, size: 22),
+                onPressed: () => _messageMentor(context),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
-          ],
-        ),
+              // Phone icon (only if phone available)
+              if (phoneNumber.isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.phone, color: kHAPrimary, size: 22),
+                  onPressed: () => _callMentor(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  void _messageMentor(BuildContext context) {
+    showMessageBottomSheet(
+      context,
+      recipientName: _mentor!.displayName,
+      recipientId: _mentor!.id,
     );
   }
 
@@ -510,6 +429,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     TextTheme t,
     UserRef guardian,
   ) {
+    final phoneNumber = guardian.phone ?? '';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -545,66 +466,133 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+
+          // Action icons
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Message icon
+              IconButton(
+                icon: Icon(Icons.mail_outline, color: kHAPrimary, size: 22),
+                onPressed: () => _messageGuardian(context, guardian),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
+              // Phone icon (only if phone available)
+              if (phoneNumber.isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.phone, color: kHAPrimary, size: 22),
+                  onPressed: () => _callGuardian(context, guardian),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAttendanceTile(
-    BuildContext context,
-    ColorScheme cs,
-    TextTheme t,
-  ) {
-    return InkWell(
-      onTap: () {
-        // TODO: Navigate to attendance screen when implemented
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Attendance details coming soon!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // Attendance Icon
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(Icons.event_available, color: cs.primary, size: 24),
-            ),
-            const SizedBox(width: 16),
-            // Attendance Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Attendance',
-                    style: t.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$_totalAttendance events',
-                    style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-            // Arrow Icon
-            Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
-          ],
-        ),
-      ),
+  void _messageGuardian(BuildContext context, UserRef guardian) {
+    showMessageBottomSheet(
+      context,
+      recipientName: guardian.displayName,
+      recipientId: guardian.id,
     );
   }
+
+  Future<void> _callGuardian(BuildContext context, UserRef guardian) async {
+    final phoneNumber = guardian.phone ?? '';
+    if (phoneNumber.isEmpty) return;
+
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        await Clipboard.setData(ClipboardData(text: phoneNumber));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Phone number copied to clipboard: $phoneNumber'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      await Clipboard.setData(ClipboardData(text: phoneNumber));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Phone number copied to clipboard: $phoneNumber'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  // TODO: Re-enable attendance tile when ready
+  // Widget _buildAttendanceTile(
+  //   BuildContext context,
+  //   ColorScheme cs,
+  //   TextTheme t,
+  // ) {
+  //   return InkWell(
+  //     onTap: () {
+  //       // TODO: Navigate to attendance screen when implemented
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('Attendance details coming soon!'),
+  //           duration: Duration(seconds: 2),
+  //         ),
+  //       );
+  //     },
+  //     child: Padding(
+  //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  //       child: Row(
+  //         children: [
+  //           // Attendance Icon
+  //           Container(
+  //             width: 48,
+  //             height: 48,
+  //             decoration: BoxDecoration(
+  //               color: cs.primary.withOpacity(0.1),
+  //               borderRadius: BorderRadius.circular(24),
+  //             ),
+  //             child: Icon(Icons.event_available, color: cs.primary, size: 24),
+  //           ),
+  //           const SizedBox(width: 16),
+  //           // Attendance Info
+  //           Expanded(
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text(
+  //                   'Attendance',
+  //                   style: t.bodyLarge?.copyWith(
+  //                     fontWeight: FontWeight.w600,
+  //                     color: cs.onSurface,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 2),
+  //                 Text(
+  //                   '$_totalAttendance events',
+  //                   style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           // Arrow Icon
+  //           Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 24),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 }

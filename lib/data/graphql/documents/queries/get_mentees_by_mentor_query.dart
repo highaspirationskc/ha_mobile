@@ -12,6 +12,7 @@ const String getMenteesByMentorQuery = r'''
             email
             firstName
             lastName
+            phoneNumber
             avatarUrl
             role
           }

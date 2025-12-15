@@ -6,6 +6,10 @@ const String updateUserMutation = r'''
     updateUser(input: $input) {
       user {
         id
+        email
+        firstName
+        lastName
+        phoneNumber
         avatarUrl
       }
       errors

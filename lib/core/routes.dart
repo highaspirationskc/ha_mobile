@@ -15,4 +15,5 @@ class AppRoutes {
   static const gradeCards = '/grade-cards';
   static const pulses = '/pulses';
   static const team = '/team';
+  static const accountSettings = '/account-settings';
 }
