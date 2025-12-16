@@ -19,7 +19,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    // Force refresh when navigating to notifications screen to get latest messages
+    _loadMessages(forceRefresh: true);
     ApiService.instance.changes.addListener(_onApiChange);
   }
 
@@ -46,14 +47,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
-  Future<void> _loadMessages() async {
+  Future<void> _loadMessages({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final messages = await ApiService.instance.getInbox();
+      final messages = await ApiService.instance.getInbox(
+        forceRefresh: forceRefresh,
+      );
       if (mounted) {
         setState(() {
           _messages = messages;
@@ -131,15 +134,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
         ),
-        // Messages list
+        // Messages list with pull-to-refresh
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _getTotalItemCount(groupedMessages),
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              return _buildItem(context, index, groupedMessages);
-            },
+          child: RefreshIndicator(
+            onRefresh: () => _loadMessages(forceRefresh: true),
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _getTotalItemCount(groupedMessages),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                return _buildItem(context, index, groupedMessages);
+              },
+            ),
           ),
         ),
       ],

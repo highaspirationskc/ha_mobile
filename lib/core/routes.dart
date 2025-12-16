@@ -16,4 +16,6 @@ class AppRoutes {
   static const pulses = '/pulses';
   static const team = '/team';
   static const accountSettings = '/account-settings';
+  static const forgotPassword = '/forgot-password';
+  static const contactSupport = '/contact-support';
 }

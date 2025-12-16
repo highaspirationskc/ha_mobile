@@ -847,7 +847,8 @@ class ApiService {
 
       if (kDebugMode) {
         print('✅ API: Fetched message thread: ${message.subject}');
-        print('   isRead: ${message.isRead}');
+        print('   isRead from server: ${message.isRead}');
+        print('   Raw isRead from JSON: ${messageData['isRead']}');
         print('   Replies: ${message.replies.length}');
       }
 

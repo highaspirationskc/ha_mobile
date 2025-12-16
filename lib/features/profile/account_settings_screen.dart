@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/session.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../core/utils/phone_formatter.dart';
@@ -10,7 +9,8 @@ import '../../business/user/entities/user.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../presentation/widgets/avatar.dart';
-import '../../presentation/screens/login_screen.dart';
+import '../../core/routes.dart';
+import '../login/login_screen.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -254,13 +254,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     }
   }
 
-  Future<void> _handleContactSupport() async {
-    // TODO: Replace with actual support email
-    const supportEmail = 'support@example.com';
-    final uri = Uri.parse('mailto:$supportEmail');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+  void _handleContactSupport() {
+    Navigator.of(context).pushNamed(AppRoutes.contactSupport);
   }
 
   @override

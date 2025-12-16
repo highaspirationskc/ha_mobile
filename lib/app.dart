@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/color_schemes.dart';
 import 'core/theme/theme_controller.dart';
-import 'presentation/screens/login_screen.dart';
+import 'features/login/login_screen.dart';
 
 class HAApp extends StatelessWidget {
   const HAApp({super.key});

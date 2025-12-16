@@ -138,15 +138,60 @@ class AuthService {
   /// Currently mocked - will be implemented when mutation is available
   Future<void> resetPassword({required String email}) async {
     if (kDebugMode) {
-      print('🔐 Requesting password reset for: $email (MOCKED)');
+      print('🔐 Requesting password reset for: $email');
     }
 
-    // Mock the response - simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(resetPasswordMutation),
+          variables: {
+            'email': email,
+          },
+        ),
+      );
 
-    // Mock successful response
-    if (kDebugMode) {
-      print('✅ Password reset email sent successfully (MOCKED)');
+      if (kDebugMode) {
+        print('📦 Password reset response received');
+        print('   Has exception: ${result.hasException}');
+        print('   Has data: ${result.data != null}');
+        if (result.hasException) {
+          print('   Exception details: ${result.exception}');
+          print('   GraphQL errors: ${result.exception?.graphqlErrors}');
+        }
+        if (result.data != null) {
+          print('   Data: ${result.data}');
+        }
+      }
+
+      if (result.hasException) {
+        final errors = result.exception?.graphqlErrors ?? [];
+        final errorMessage = errors.isNotEmpty
+            ? errors.map((e) => e.message).join(', ')
+            : 'Failed to request password reset';
+        throw Exception(errorMessage);
+      }
+
+      final data = result.data?['requestPasswordReset'];
+      if (data == null) {
+        throw Exception('Invalid response from server');
+      }
+
+      final success = data['success'] as bool? ?? false;
+      final message = data['message'] as String? ?? '';
+
+      if (!success) {
+        throw Exception(message.isNotEmpty ? message : 'Failed to request password reset');
+      }
+
+      if (kDebugMode) {
+        print('✅ Password reset request successful: $message');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Password reset request failed: $e');
+      }
+      rethrow;
     }
   }
 

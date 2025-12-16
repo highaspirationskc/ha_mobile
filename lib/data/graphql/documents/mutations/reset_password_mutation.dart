@@ -2,10 +2,10 @@
 
 /// GraphQL mutation to request a password reset
 const String resetPasswordMutation = r'''
-  mutation ResetPassword($email: String!) {
-    resetPassword(email: $email) {
+  mutation RequestPasswordReset($email: String!) {
+    requestPasswordReset(email: $email) {
       success
-      errors
+      message
     }
   }
 ''';

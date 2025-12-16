@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'brand_colors.dart';
 
-ColorScheme buildLightScheme({Color seed = kBrandSeed}) {
+ColorScheme buildLightScheme({Color seed = kHAPrimary}) {
   final base = ColorScheme.fromSeed(
     seedColor: seed,
     brightness: Brightness.light,
@@ -17,7 +17,7 @@ ColorScheme buildLightScheme({Color seed = kBrandSeed}) {
   );
 }
 
-ColorScheme buildDarkScheme({Color seed = kBrandSeed}) {
+ColorScheme buildDarkScheme({Color seed = kHAPrimary}) {
   final base = ColorScheme.fromSeed(
     seedColor: seed,
     brightness: Brightness.dark,

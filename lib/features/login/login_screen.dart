@@ -1,14 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:ha_mobile/presentation/widgets/wave_panel.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../core/session.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/auth_storage.dart';
 import '../../data/services/olympic_season_service.dart';
-import '../widgets/button_long.dart';
-import '../screens/root_shell.dart';
+import 'forgot_password.dart';
+import '../../presentation/widgets/button_long.dart';
+import '../../presentation/screens/root_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -88,102 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _handleForgotPassword() async {
-    final emailController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    final cs = Theme.of(context).colorScheme;
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Reset Password'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              hintText: 'example@email.com',
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!value.contains('@')) {
-                return 'Please enter a valid email';
-              }
-              return null;
-            },
-            autofocus: true,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (formKey.currentState?.validate() ?? false) {
-                Navigator.of(dialogContext).pop();
-
-                try {
-                  await AuthService.instance.resetPassword(
-                    email: emailController.text.trim(),
-                  );
-
-                  if (context.mounted) {
-                    // Show confirmation dialog
-                    showDialog(
-                      context: context,
-                      builder: (confirmContext) => AlertDialog(
-                        title: const Text('Password Reset Sent'),
-                        content: const Text(
-                          'A password reset link has been sent to your email. '
-                          'Please check your inbox and follow the instructions to reset your password.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(confirmContext).pop(),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to send password reset: ${e.toString().replaceAll('Exception: ', '')}',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: cs.primary),
-            child: const Text('Submit'),
-          ),
-        ],
-      ),
+  void _handleForgotPassword() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
     );
-
-    emailController.dispose();
   }
 
   @override
@@ -424,15 +334,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 16),
 
-                              // Forgot Password Button
-                              TextButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : _handleForgotPassword,
-                                child: const Text('Forgot Password'),
-                              ),
-                              const SizedBox(height: 24),
-
                               // Footer text
                               Text(
                                 'Need an account? Contact High Aspirations to get set up today',
@@ -442,11 +343,77 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 textAlign: TextAlign.center,
                               ),
+                              const SizedBox(height: 16),
+
+                              // Forgot Password Button
+                              TextButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : _handleForgotPassword,
+                                child: const Text('Forgot Password'),
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
+                  ),
+                ),
+
+                // Privacy Policy and Terms links at bottom
+                Positioned(
+                  bottom: 24,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: _handlePrivacyPolicy,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Privacy Policy',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black.withOpacity(0.6),
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        ' • ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _handleTerms,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Terms',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black.withOpacity(0.6),
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -455,5 +422,33 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handlePrivacyPolicy() async {
+    const privacyPolicyUrl = 'https://api.highaspirationskc.org/privacy_policy';
+    final uri = Uri.parse(privacyPolicyUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open Privacy Policy')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleTerms() async {
+    const termsUrl = 'https://api.highaspirationskc.org/terms_of_use';
+    final uri = Uri.parse(termsUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Unable to open Terms')));
+      }
+    }
   }
 }

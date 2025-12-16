@@ -23,6 +23,7 @@ import 'check_in_scanner.dart';
 import '../../features/mentees/mentees_list_screen.dart';
 import '../../features/profile/community_service_screen.dart';
 import '../../features/profile/account_settings_screen.dart';
+import '../../features/contact_support/contact_support_screen.dart';
 import '../widgets/grade_cards_screen.dart';
 import 'pulses_screen.dart';
 import 'team_screen.dart';
@@ -335,6 +336,11 @@ class _RootShellState extends State<RootShell> {
               builder: (_) => const AccountSettingsScreen(),
               settings: const RouteSettings(name: AppRoutes.accountSettings),
             );
+          case AppRoutes.contactSupport:
+            return MaterialPageRoute(
+              builder: (_) => const ContactSupportScreen(),
+              settings: const RouteSettings(name: AppRoutes.contactSupport),
+            );
           case AppRoutes.pulses:
             return MaterialPageRoute(
               builder: (_) => const PulsesScreen(),
@@ -370,6 +376,7 @@ class _RootShellState extends State<RootShell> {
         AppRoutes.communityService => 'Community Service',
         AppRoutes.gradeCards => 'Grade Cards',
         AppRoutes.accountSettings => 'Account Settings',
+        AppRoutes.contactSupport => 'Contact Support',
         AppRoutes.pulses => 'Pulses',
         AppRoutes.team => 'Team',
         AppRoutes.notificationsRoot => 'Notifications',

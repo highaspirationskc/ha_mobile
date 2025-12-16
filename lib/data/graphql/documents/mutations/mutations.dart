@@ -8,3 +8,4 @@ export 'compose_message_mutation.dart';
 export 'create_grade_card_mutation.dart';
 export 'delete_grade_card_mutation.dart';
 export 'archive_message_mutation.dart';
+export 'reset_password_mutation.dart';

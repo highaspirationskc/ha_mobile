@@ -117,7 +117,7 @@ class _MessageScreenState extends State<MessageScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Author header with avatar, name, mentor chip, and timestamp
-                _buildAuthorHeader(context, message, cs, t),
+                _buildAuthorHeader(context, message, cs, t, showArchive: true),
 
                 const SizedBox(height: 24),
 
@@ -175,14 +175,10 @@ class _MessageScreenState extends State<MessageScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAuthorHeader(context, reply, cs, t),
+          _buildAuthorHeader(context, reply, cs, t, showArchive: false),
           const SizedBox(height: 12),
           Text(
             reply.message,
@@ -197,8 +193,9 @@ class _MessageScreenState extends State<MessageScreen> {
     BuildContext context,
     Message message,
     ColorScheme cs,
-    TextTheme t,
-  ) {
+    TextTheme t, {
+    bool showArchive = false,
+  }) {
     final author = message.author;
     final authorName = _getAuthorName(author);
     final showMentorChip = _isMentor(author);
@@ -263,7 +260,7 @@ class _MessageScreenState extends State<MessageScreen> {
           ),
         ),
 
-        // Timestamp and archive button
+        // Timestamp and archive button (only show archive on original message)
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -271,15 +268,17 @@ class _MessageScreenState extends State<MessageScreen> {
               relativeTime,
               style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
-            SizedBox(width: 16),
-            IconButton(
-              icon: Icon(Icons.archive_outlined, color: cs.onSurface),
-              onPressed: () => _handleArchiveMessage(context, message),
-              tooltip: 'Archive message',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              iconSize: 24,
-            ),
+            if (showArchive) ...[
+              SizedBox(width: 16),
+              IconButton(
+                icon: Icon(Icons.archive_outlined, color: cs.onSurface),
+                onPressed: () => _handleArchiveMessage(context, message),
+                tooltip: 'Archive message',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 24,
+              ),
+            ],
           ],
         ),
       ],
@@ -326,33 +325,6 @@ class _MessageScreenState extends State<MessageScreen> {
     BuildContext context,
     Message message,
   ) async {
-    final cs = Theme.of(context).colorScheme;
-
-    // Show confirmation dialog
-    final shouldArchive = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Archive Message'),
-        content: const Text('Are you sure you want to archive this message?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: cs.primary),
-            child: const Text('Archive'),
-          ),
-        ],
-      ),
-    );
-
-    // If user cancelled, do nothing
-    if (shouldArchive != true || !context.mounted) {
-      return;
-    }
-
     try {
       await ApiService.instance.archiveMessage(
         messageId: message.id,
@@ -360,10 +332,40 @@ class _MessageScreenState extends State<MessageScreen> {
       );
 
       if (context.mounted) {
+        // Show snackbar with undo option
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Message archived'),
+          SnackBar(
+            content: const Text('Message archived'),
             behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Undo',
+              textColor: Colors.white,
+              onPressed: () async {
+                try {
+                  await ApiService.instance.archiveMessage(
+                    messageId: message.id,
+                    archive: false,
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Message unarchived'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to unarchive: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
           ),
         );
         // Navigate back after archiving
