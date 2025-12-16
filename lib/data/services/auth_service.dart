@@ -134,6 +134,22 @@ class AuthService {
     }
   }
 
+  /// Request a password reset for the given email
+  /// Currently mocked - will be implemented when mutation is available
+  Future<void> resetPassword({required String email}) async {
+    if (kDebugMode) {
+      print('🔐 Requesting password reset for: $email (MOCKED)');
+    }
+
+    // Mock the response - simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Mock successful response
+    if (kDebugMode) {
+      print('✅ Password reset email sent successfully (MOCKED)');
+    }
+  }
+
   /// Check if user is authenticated
   bool get isAuthenticated => _graphQLClient.isAuthenticated;
 

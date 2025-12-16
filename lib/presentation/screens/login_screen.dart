@@ -88,6 +88,104 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleForgotPassword() async {
+    final emailController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final cs = Theme.of(context).colorScheme;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email',
+              hintText: 'example@email.com',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your email';
+              }
+              if (!value.contains('@')) {
+                return 'Please enter a valid email';
+              }
+              return null;
+            },
+            autofocus: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.of(dialogContext).pop();
+
+                try {
+                  await AuthService.instance.resetPassword(
+                    email: emailController.text.trim(),
+                  );
+
+                  if (context.mounted) {
+                    // Show confirmation dialog
+                    showDialog(
+                      context: context,
+                      builder: (confirmContext) => AlertDialog(
+                        title: const Text('Password Reset Sent'),
+                        content: const Text(
+                          'A password reset link has been sent to your email. '
+                          'Please check your inbox and follow the instructions to reset your password.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(confirmContext).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Failed to send password reset: ${e.toString().replaceAll('Exception: ', '')}',
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: cs.primary),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+
+    emailController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -316,10 +414,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                       .withOpacity(0.6),
                                   disabledForegroundColor: Colors.white
                                       .withOpacity(0.7),
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Forgot Password Button
+                              TextButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : _handleForgotPassword,
+                                child: const Text('Forgot Password'),
                               ),
                               const SizedBox(height: 24),
 
