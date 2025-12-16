@@ -263,10 +263,24 @@ class _MessageScreenState extends State<MessageScreen> {
           ),
         ),
 
-        // Timestamp
-        Text(
-          relativeTime,
-          style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+        // Timestamp and archive button
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              relativeTime,
+              style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            SizedBox(width: 16),
+            IconButton(
+              icon: Icon(Icons.archive_outlined, color: cs.onSurface),
+              onPressed: () => _handleArchiveMessage(context, message),
+              tooltip: 'Archive message',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              iconSize: 24,
+            ),
+          ],
         ),
       ],
     );
@@ -306,6 +320,65 @@ class _MessageScreenState extends State<MessageScreen> {
     if (months < 12) return '${months}mo';
     final years = (diff.inDays / 365).floor();
     return '${years}y';
+  }
+
+  Future<void> _handleArchiveMessage(
+    BuildContext context,
+    Message message,
+  ) async {
+    final cs = Theme.of(context).colorScheme;
+
+    // Show confirmation dialog
+    final shouldArchive = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Archive Message'),
+        content: const Text('Are you sure you want to archive this message?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: cs.primary),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+
+    // If user cancelled, do nothing
+    if (shouldArchive != true || !context.mounted) {
+      return;
+    }
+
+    try {
+      await ApiService.instance.archiveMessage(
+        messageId: message.id,
+        archive: true,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message archived'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // Navigate back after archiving
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to archive message: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

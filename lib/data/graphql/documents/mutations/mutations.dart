@@ -7,3 +7,4 @@ export 'create_community_service_mutation.dart';
 export 'compose_message_mutation.dart';
 export 'create_grade_card_mutation.dart';
 export 'delete_grade_card_mutation.dart';
+export 'archive_message_mutation.dart';

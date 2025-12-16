@@ -29,6 +29,7 @@ import '../graphql/documents/mutations/create_community_service_mutation.dart';
 import '../graphql/documents/mutations/compose_message_mutation.dart';
 import '../graphql/documents/mutations/create_grade_card_mutation.dart';
 import '../graphql/documents/mutations/delete_grade_card_mutation.dart';
+import '../graphql/documents/mutations/archive_message_mutation.dart';
 import 'olympic_season_service.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, guardians, and children
@@ -850,11 +851,16 @@ class ApiService {
         print('   Replies: ${message.replies.length}');
       }
 
-      // Update the cached inbox to mark this message as read
+      // Update the cached inbox to reflect the read status from the server
+      // The backend's messageThread query should mark it as read
       if (_cachedInbox != null) {
         final index = _cachedInbox!.indexWhere((m) => m.id == messageId);
         if (index >= 0) {
-          _cachedInbox![index] = _cachedInbox![index].copyWith(isRead: true);
+          // Use the isRead value from the server response (should be true after querying)
+          // If backend marks it as read, message.isRead will be true
+          _cachedInbox![index] = _cachedInbox![index].copyWith(
+            isRead: message.isRead,
+          );
           changes.value++; // Notify listeners that inbox changed
         }
       }
@@ -933,6 +939,62 @@ class ApiService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ API: Exception composing message: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Archives or unarchives a message
+  Future<void> archiveMessage({
+    required String messageId,
+    required bool archive,
+  }) async {
+    if (kDebugMode) {
+      print(
+        '📦 API: ${archive ? 'Archiving' : 'Unarchiving'} message: $messageId',
+      );
+    }
+
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(archiveMessageMutation),
+          variables: {'messageId': messageId, 'archive': archive},
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error archiving message: ${result.exception}');
+        }
+        throw Exception('Failed to archive message: ${result.exception}');
+      }
+
+      final archiveData =
+          result.data?['archiveMessage'] as Map<String, dynamic>?;
+      final errors = archiveData?['errors'] as List<dynamic>?;
+      final success = archiveData?['success'] as bool? ?? false;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception(errors.join(', '));
+      }
+
+      if (!success) {
+        throw Exception('Failed to archive message');
+      }
+
+      if (kDebugMode) {
+        print(
+          '✅ API: Message ${archive ? 'archived' : 'unarchived'} successfully',
+        );
+      }
+
+      // Clear inbox cache so it refetches with updated archive status
+      clearInboxCache();
+      changes.value++; // notify listeners
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception archiving message: $e');
       }
       rethrow;
     }
