@@ -8,6 +8,7 @@ import '../../core/session.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/auth_storage.dart';
 import '../../data/services/olympic_season_service.dart';
+import '../../data/services/notification_service.dart';
 import 'forgot_password.dart';
 import '../../presentation/widgets/button_long.dart';
 import '../../presentation/screens/root_shell.dart';
@@ -74,6 +75,14 @@ class _LoginScreenState extends State<LoginScreen> {
           print('⚠️ Failed to fetch Olympic Season: $e');
         }
         // Don't block login if this fails - it will use mock data
+      });
+
+      // Initialize push notifications after login
+      NotificationService.instance.initialize().catchError((e) {
+        if (kDebugMode) {
+          print('⚠️ Failed to initialize notifications: $e');
+        }
+        // Don't block login if this fails
       });
 
       if (mounted) {

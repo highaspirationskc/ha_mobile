@@ -8,6 +8,7 @@ import '../widgets/ha_app_bar.dart';
 import '../widgets/ha_nav_bar.dart';
 import '../widgets/avatar.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/notification_service.dart';
 import '../../business/user/entities/user.dart';
 
 // Screens (body-only)
@@ -82,6 +83,33 @@ class _RootShellState extends State<RootShell> {
     _loadCurrentUser();
     _loadUnreadCount();
     ApiService.instance.changes.addListener(_onApiChange);
+    _setupNotificationHandling();
+  }
+
+  void _setupNotificationHandling() {
+    // Set up notification tap handler to navigate to relevant screens
+    NotificationService.instance.onNotificationTap = (message) {
+      final data = message.data;
+      if (data.isEmpty) return;
+
+      // Handle navigation based on notification data
+      // Example: if notification contains a messageId, navigate to that message
+      if (data.containsKey('messageId')) {
+        final messageId = data['messageId'] as String?;
+        if (messageId != null) {
+          // Find the appropriate navigator based on current tab
+          // For simplicity, use the home tab navigator
+          final navigator = _homeKey.currentState;
+          if (navigator != null) {
+            navigator.pushNamed(
+              AppRoutes.notificationMessage,
+              arguments: messageId,
+            );
+          }
+        }
+      }
+      // Add more navigation cases based on your notification payload structure
+    };
   }
 
   @override
