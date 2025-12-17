@@ -184,18 +184,18 @@ class _CheckInScannerScreenState extends State<CheckInScannerScreen> {
           ),
 
           // Mock button
-          Positioned(
-            right: 16,
-            bottom: 24,
-            child: FloatingActionButton.extended(
-              heroTag: 'mockScan',
-              backgroundColor: Colors.white.withOpacity(0.92),
-              foregroundColor: Colors.black87,
-              onPressed: _handling ? null : _testScan,
-              icon: const Icon(Icons.qr_code_2),
-              label: const Text('Test scan'),
-            ),
-          ),
+          // Positioned(
+          //   right: 16,
+          //   bottom: 24,
+          //   child: FloatingActionButton.extended(
+          //     heroTag: 'mockScan',
+          //     backgroundColor: Colors.white.withOpacity(0.92),
+          //     foregroundColor: Colors.black87,
+          //     onPressed: _handling ? null : _testScan,
+          //     icon: const Icon(Icons.qr_code_2),
+          //     label: const Text('Test scan'),
+          //   ),
+          // ),
         ],
       ),
     );
