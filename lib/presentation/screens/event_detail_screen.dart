@@ -178,122 +178,132 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
     final e = _event;
 
     // Show all attendees in a grid
     final List<User> allAttendees = e.registeredUsers;
 
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        // Full-bleed header image
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: _HeaderImage(src: e.imageUrl ?? ''),
-        ),
-
-        // Content
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title + Registered badge
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      e.name,
-                      style: textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (_registered || _checkedIn) ...[
-                    const SizedBox(width: 8),
-                    _StatusBadge(isCheckedIn: _checkedIn),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              _InfoRow(
-                icon: Icons.calendar_today_outlined,
-                primary: formatLongDate(e.eventDate),
-                secondary: formatTime(e.eventDate),
-              ),
-              const _SectionDivider(),
-
-              _InfoRow(icon: Icons.place_outlined, primary: e.location ?? ''),
-              const _SectionDivider(),
-
-              // About
-              Text(
-                'About',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(e.description ?? '', style: textTheme.bodyLarge),
-
-              // ---- Attending (between About and buttons) ----
-              const SizedBox(height: 24),
-              Text(
-                'Attending',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _AttendeesGrid(attendees: allAttendees),
-              const SizedBox(height: 24),
-
-              // ---- Actions ----
-              if (_loadingStatus)
-                ButtonLong(label: 'Loading…', onPressed: null, isLoading: true)
-              else if (!_registered) ...[
-                ButtonLong(
-                  label: _registering ? 'Registering…' : 'Register',
-                  icon: Icons.event_available_outlined,
-                  isLoading: _registering,
-                  onPressed: _registering ? null : _onRegister,
-                ),
-              ] else ...[
-                // Primary: Check-in
-                ButtonLong(
-                  label: _checkedIn
-                      ? 'Checked In'
-                      : (_checkingIn ? 'Checking in…' : 'Check-in'),
-                  icon: _checkedIn ? Icons.check_circle : Icons.login,
-                  isLoading: _checkingIn,
-                  onPressed: (_checkingIn || _checkedIn) ? null : _onCheckIn,
-                  style: _checkedIn
-                      ? FilledButton.styleFrom(
-                          backgroundColor: Colors.grey.shade200,
-                          foregroundColor: Colors.grey.shade600,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                // Secondary: Cancel registration
-                ButtonLongOutlined(
-                  label: _unregistering ? 'Cancelling…' : 'Cancel registration',
-                  icon: Icons.cancel_outlined,
-                  isLoading: _unregistering,
-                  onPressed: _unregistering ? null : _onCancelRegistration,
-                ),
-              ],
-            ],
+    return Container(
+      color: cs.surface,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          // Full-bleed header image
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: _HeaderImage(src: e.imageUrl ?? ''),
           ),
-        ),
-      ],
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title + Registered badge
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        e.name,
+                        style: textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_registered || _checkedIn) ...[
+                      const SizedBox(width: 8),
+                      _StatusBadge(isCheckedIn: _checkedIn),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                _InfoRow(
+                  icon: Icons.calendar_today_outlined,
+                  primary: formatLongDate(e.eventDate),
+                  secondary: formatTime(e.eventDate),
+                ),
+                const _SectionDivider(),
+
+                _InfoRow(icon: Icons.place_outlined, primary: e.location ?? ''),
+                const _SectionDivider(),
+
+                // About
+                Text(
+                  'About',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(e.description ?? '', style: textTheme.bodyLarge),
+
+                // ---- Attending (between About and buttons) ----
+                const SizedBox(height: 24),
+                Text(
+                  'Attending',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _AttendeesGrid(attendees: allAttendees),
+                const SizedBox(height: 24),
+
+                // ---- Actions ----
+                if (_loadingStatus)
+                  ButtonLong(
+                    label: 'Loading…',
+                    onPressed: null,
+                    isLoading: true,
+                  )
+                else if (!_registered) ...[
+                  ButtonLong(
+                    label: _registering ? 'Registering…' : 'Register',
+                    icon: Icons.event_available_outlined,
+                    isLoading: _registering,
+                    onPressed: _registering ? null : _onRegister,
+                  ),
+                ] else ...[
+                  // Primary: Check-in
+                  ButtonLong(
+                    label: _checkedIn
+                        ? 'Checked In'
+                        : (_checkingIn ? 'Checking in…' : 'Check-in'),
+                    icon: _checkedIn ? Icons.check_circle : Icons.login,
+                    isLoading: _checkingIn,
+                    onPressed: (_checkingIn || _checkedIn) ? null : _onCheckIn,
+                    style: _checkedIn
+                        ? FilledButton.styleFrom(
+                            backgroundColor: Colors.grey.shade200,
+                            foregroundColor: Colors.grey.shade600,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  // Secondary: Cancel registration
+                  ButtonLongOutlined(
+                    label: _unregistering
+                        ? 'Cancelling…'
+                        : 'Cancel registration',
+                    icon: Icons.cancel_outlined,
+                    isLoading: _unregistering,
+                    onPressed: _unregistering ? null : _onCancelRegistration,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
