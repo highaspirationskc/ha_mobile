@@ -5,6 +5,7 @@ import '../../data/services/auth_storage.dart';
 import '../../data/graphql/graphql_client.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/notification_service.dart';
+import '../../data/services/olympic_season_service.dart';
 import '../../core/session.dart';
 import '../../presentation/screens/root_shell.dart';
 import 'login_screen.dart';
@@ -112,6 +113,13 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
   }
 
   void _initializeServices() {
+    // Fetch Olympic Season data in the background (don't block on errors)
+    OlympicSeasonService.instance.fetchCurrentSeason().catchError((e) {
+      if (kDebugMode) {
+        print('⚠️ Failed to fetch Olympic Season: $e');
+      }
+    });
+
     // Initialize push notifications (don't block on errors)
     if (!kIsWeb) {
       NotificationService.instance.initialize().catchError((e) {
