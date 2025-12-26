@@ -1,4 +1,5 @@
 // lib/data/services/notification_service.dart
+import 'dart:io' show Platform;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 
@@ -122,6 +123,39 @@ class NotificationService {
       return null;
     }
     try {
+      // On iOS, the APNS token needs to be available before getting FCM token
+      // We'll try to get it, but if it fails, the token refresh listener will handle it
+      if (!kIsWeb && Platform.isIOS) {
+        if (kDebugMode) {
+          print('🍎 iOS detected, checking APNS token availability...');
+        }
+
+        // Try to get APNS token - this may not be available immediately
+        try {
+          final apnsToken = await _firebaseMessaging!.getAPNSToken();
+          if (apnsToken == null) {
+            if (kDebugMode) {
+              print('ℹ️ APNS token not available yet - this is normal');
+              print(
+                'ℹ️ FCM token will be obtained automatically when APNS token becomes available',
+              );
+            }
+            // Return null - the token refresh listener will handle it
+            return null;
+          }
+        } catch (e) {
+          // APNS token not available yet - this is expected on first launch
+          if (kDebugMode) {
+            print('ℹ️ APNS token not available yet: $e');
+            print(
+              'ℹ️ This is normal on iOS - FCM token will be available after APNS token is set',
+            );
+          }
+          // Return null - the token refresh listener will handle it when APNS becomes available
+          return null;
+        }
+      }
+
       _fcmToken = await _firebaseMessaging!.getToken();
       if (kDebugMode) {
         print('✅ FCM token obtained: $_fcmToken');
@@ -134,9 +168,22 @@ class NotificationService {
 
       return _fcmToken;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error getting FCM token: $e');
+      // On iOS, if APNS token error, this is expected initially
+      if (!kIsWeb &&
+          Platform.isIOS &&
+          e.toString().contains('apns-token-not-set')) {
+        if (kDebugMode) {
+          print('ℹ️ APNS token not set yet - this is normal on iOS');
+          print(
+            'ℹ️ FCM token will be obtained automatically via token refresh listener',
+          );
+        }
+      } else {
+        if (kDebugMode) {
+          print('❌ Error getting FCM token: $e');
+        }
       }
+      // Return null - the token refresh listener will handle it
       return null;
     }
   }
