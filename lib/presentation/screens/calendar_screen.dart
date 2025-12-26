@@ -50,21 +50,24 @@ class _CalendarScreenState extends State<CalendarScreen>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        HATabs(
-          controller: _tabController,
-          tabNames: const ['List', 'Calendar'],
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: TabBarView(
+    return Container(
+      color: cs.surface,
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          HATabs(
             controller: _tabController,
-            children: [_buildListView(context), _buildMonthView(context, cs)],
+            tabNames: const ['List', 'Calendar'],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [_buildListView(context), _buildMonthView(context, cs)],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
