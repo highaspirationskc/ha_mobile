@@ -5,6 +5,7 @@ import '../../business/auth/entities/auth_response.dart';
 import '../graphql/graphql_client.dart';
 import '../graphql/documents/mutations/mutations.dart';
 import 'api_service.dart';
+import 'auth_storage.dart';
 
 /// Service for handling authentication operations
 class AuthService {
@@ -121,6 +122,9 @@ class AuthService {
       // Clear auth token from client
       _graphQLClient.clearAuthToken();
 
+      // Clear auth data from storage
+      await AuthStorage.clearAuth();
+
       if (kDebugMode) {
         print('✅ Logout successful');
       }
@@ -131,6 +135,7 @@ class AuthService {
       // Clear token even if server logout fails
       ApiService.instance.clearUserCaches();
       _graphQLClient.clearAuthToken();
+      await AuthStorage.clearAuth();
     }
   }
 
@@ -145,9 +150,7 @@ class AuthService {
       final result = await _graphQLClient.client.mutate(
         MutationOptions(
           document: gql(resetPasswordMutation),
-          variables: {
-            'email': email,
-          },
+          variables: {'email': email},
         ),
       );
 
@@ -181,7 +184,9 @@ class AuthService {
       final message = data['message'] as String? ?? '';
 
       if (!success) {
-        throw Exception(message.isNotEmpty ? message : 'Failed to request password reset');
+        throw Exception(
+          message.isNotEmpty ? message : 'Failed to request password reset',
+        );
       }
 
       if (kDebugMode) {

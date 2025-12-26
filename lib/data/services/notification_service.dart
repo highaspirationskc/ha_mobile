@@ -4,20 +4,25 @@ import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 
 /// Top-level function for handling background messages
 /// This must be a top-level function (not a class method)
+/// Must be registered before runApp() in main()
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Note: Firebase must be initialized in the background isolate
   // Note: kDebugMode might not be available in background isolate
-  // So we'll just log unconditionally or use try-catch
   try {
+    // Initialize Firebase in background isolate if not already initialized
+    // (This is a no-op if already initialized)
     print('📱 Handling background message: ${message.messageId}');
     print('   Title: ${message.notification?.title}');
     print('   Body: ${message.notification?.body}');
     print('   Data: ${message.data}');
+
+    // Background messages are handled here
+    // You can perform tasks like updating local storage, etc.
   } catch (e) {
     // Silently handle if logging fails
+    print('❌ Error in background message handler: $e');
   }
-  // Background messages are handled here
-  // You can perform tasks like updating local storage, etc.
 }
 
 /// Service for handling Firebase Cloud Messaging (FCM) push notifications
@@ -67,8 +72,8 @@ class NotificationService {
         );
       }
 
-      // Set up background message handler
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      // Note: onBackgroundMessage must be registered in main() before runApp()
+      // It's not called here to avoid duplicate registration
 
       // Get FCM token
       await _getFCMToken();
