@@ -75,44 +75,55 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Container(
+        color: cs.surface,
+        child: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Error loading messages',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 8),
-            TextButton(onPressed: _loadMessages, child: const Text('Retry')),
-          ],
+      return Container(
+        color: cs.surface,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Error loading messages',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 8),
+              TextButton(onPressed: _loadMessages, child: const Text('Retry')),
+            ],
+          ),
         ),
       );
     }
 
     if (_messages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No messages yet',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+      return Container(
+        color: cs.surface,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.inbox_outlined,
+                size: 64,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'No messages yet',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -120,35 +131,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // Group messages by time period
     final groupedMessages = _groupMessagesByTime(_messages);
 
-    return Column(
-      children: [
-        // Notifications header
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Text(
-            'Notifications',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+    return Container(
+      color: cs.surface,
+      child: Column(
+        children: [
+          // Notifications header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Text(
+              'Notifications',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
-        ),
-        // Messages list with pull-to-refresh
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => _loadMessages(forceRefresh: true),
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _getTotalItemCount(groupedMessages),
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                return _buildItem(context, index, groupedMessages);
-              },
+          // Messages list with pull-to-refresh
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => _loadMessages(forceRefresh: true),
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _getTotalItemCount(groupedMessages),
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  return _buildItem(context, index, groupedMessages);
+                },
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
