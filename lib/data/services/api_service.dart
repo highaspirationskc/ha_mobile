@@ -2154,4 +2154,63 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// Update FCM token for push notifications
+  /// Attempts to send the token to the backend via updateUser mutation
+  Future<void> updateFCMToken(String fcmToken) async {
+    if (kDebugMode) {
+      print('📤 API: Sending FCM token to backend...');
+    }
+
+    try {
+      final currentUser = await getCurrentUser();
+      final userId = currentUser.user.id.toString();
+
+      // Try to update user with FCM token
+      // Note: This assumes the backend supports 'fcmToken' or 'deviceToken' field
+      // If not, you'll need to add a separate mutation for device tokens
+      final input = <String, dynamic>{'id': userId, 'fcmToken': fcmToken};
+
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(updateUserMutation),
+          variables: {'input': input},
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print(
+            '⚠️ API: GraphQL error sending FCM token (backend may not support this field): ${result.exception}',
+          );
+        }
+        // Don't throw - FCM token registration is non-critical
+        return;
+      }
+
+      final updateData = result.data?['updateUser'] as Map<String, dynamic>?;
+      final errors = updateData?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        if (kDebugMode) {
+          print(
+            '⚠️ API: Backend returned errors when updating FCM token: ${errors.join(', ')}',
+          );
+        }
+        // Don't throw - FCM token registration is non-critical
+        return;
+      }
+
+      if (kDebugMode) {
+        print('✅ API: FCM token sent to backend successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          '⚠️ API: Exception sending FCM token to backend (non-critical): $e',
+        );
+      }
+      // Don't rethrow - FCM token registration shouldn't block app functionality
+    }
+  }
 }

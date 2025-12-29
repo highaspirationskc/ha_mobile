@@ -2,6 +2,7 @@
 import 'dart:io' show Platform;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'api_service.dart';
 
 /// Top-level function for handling background messages
 /// This must be a top-level function (not a class method)
@@ -191,12 +192,7 @@ class NotificationService {
   /// Send FCM token to backend
   Future<void> _sendTokenToBackend(String token) async {
     try {
-      // TODO: Implement API call to send FCM token to your backend
-      // Example:
-      // await ApiService.instance.updateFCMToken(token);
-      if (kDebugMode) {
-        print('📤 TODO: Send FCM token to backend: $token');
-      }
+      await ApiService.instance.updateFCMToken(token);
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error sending FCM token to backend: $e');

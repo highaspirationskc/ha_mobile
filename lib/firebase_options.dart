@@ -59,10 +59,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBNA4COGpl0GTE66LZq8mMvkwhalP9NoTY',
-    appId: '1:125748060753:ios:d6c3e1b4f3cbec09aece70',
+    appId: '1:125748060753:ios:9d2d5b690078ca12aece70',
     messagingSenderId: '125748060753',
     projectId: 'high-aspirations-app',
     storageBucket: 'high-aspirations-app.firebasestorage.app',
-    iosBundleId: 'com.highaspirations.haMobile',
+    iosBundleId: 'com.highaspirations.hamobile',
   );
 }
