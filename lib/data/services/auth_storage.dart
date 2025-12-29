@@ -6,6 +6,7 @@ import '../../business/auth/entities/auth_response.dart' as auth;
 class AuthStorage {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'auth_user';
+  static const String _fcmTokenKey = 'registered_fcm_token';
 
   /// Save authentication data
   static Future<void> saveAuth({
@@ -36,11 +37,24 @@ class AuthStorage {
     }
   }
 
+  /// Save registered FCM token
+  static Future<void> saveRegisteredFCMToken(String fcmToken) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_fcmTokenKey, fcmToken);
+  }
+
+  /// Get stored registered FCM token
+  static Future<String?> getRegisteredFCMToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_fcmTokenKey);
+  }
+
   /// Clear all auth data
   static Future<void> clearAuth() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
+    await prefs.remove(_fcmTokenKey);
   }
 
   /// Check if user is authenticated

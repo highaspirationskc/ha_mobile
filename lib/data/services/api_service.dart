@@ -30,6 +30,8 @@ import '../graphql/documents/mutations/compose_message_mutation.dart';
 import '../graphql/documents/mutations/create_grade_card_mutation.dart';
 import '../graphql/documents/mutations/delete_grade_card_mutation.dart';
 import '../graphql/documents/mutations/archive_message_mutation.dart';
+import '../graphql/documents/mutations/mutations.dart'
+    show registerDeviceMutation;
 import 'olympic_season_service.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, guardians, and children
@@ -2155,8 +2157,71 @@ class ApiService {
     }
   }
 
+  /// Register a device for push notifications
+  /// Registers the FCM token with the backend
+  Future<void> registerDevice({
+    required String fcmToken,
+    String? deviceName,
+    required String platform,
+  }) async {
+    if (kDebugMode) {
+      print('📱 API: Registering device for push notifications...');
+      print('   Platform: $platform');
+      print('   Device Name: ${deviceName ?? 'Not provided'}');
+    }
+
+    try {
+      final input = <String, dynamic>{
+        'fcmToken': fcmToken,
+        'platform': platform,
+      };
+      if (deviceName != null && deviceName.isNotEmpty) {
+        input['deviceName'] = deviceName;
+      }
+
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(registerDeviceMutation),
+          variables: {'input': input},
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: Error registering device: ${result.exception}');
+        }
+        throw Exception('Failed to register device');
+      }
+
+      final registerData =
+          result.data?['registerDevice'] as Map<String, dynamic>?;
+      if (registerData == null) {
+        throw Exception('Invalid response from server');
+      }
+
+      final errors = registerData['errors'] as List<dynamic>?;
+      if (errors != null && errors.isNotEmpty) {
+        final errorMessage = errors.join(', ');
+        if (kDebugMode) {
+          print('❌ API: Backend returned errors: $errorMessage');
+        }
+        throw Exception(errorMessage);
+      }
+
+      if (kDebugMode) {
+        print('✅ API: Device registered successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception registering device: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Update FCM token for push notifications
   /// Attempts to send the token to the backend via updateUser mutation
+  /// @deprecated Use registerDevice instead
   Future<void> updateFCMToken(String fcmToken) async {
     if (kDebugMode) {
       print('📤 API: Sending FCM token to backend...');

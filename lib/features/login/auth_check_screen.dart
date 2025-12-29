@@ -7,6 +7,7 @@ import '../../data/services/api_service.dart';
 import '../../data/services/notification_service.dart';
 import '../../data/services/olympic_season_service.dart';
 import '../../core/session.dart';
+import '../../core/utils/device_registration.dart';
 import '../../presentation/screens/root_shell.dart';
 import 'login_screen.dart';
 
@@ -120,13 +121,22 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
       }
     });
 
-    // Initialize push notifications (don't block on errors)
+    // Initialize push notifications and register device (don't block on errors)
     if (!kIsWeb) {
-      NotificationService.instance.initialize().catchError((e) {
-        if (kDebugMode) {
-          print('⚠️ Failed to initialize notifications: $e');
-        }
-      });
+      NotificationService.instance
+          .initialize()
+          .then((_) {
+            // Register device after notification service is initialized
+            // Wait a bit for FCM token to be available
+            Future.delayed(const Duration(seconds: 2), () {
+              registerDeviceIfNeeded();
+            });
+          })
+          .catchError((e) {
+            if (kDebugMode) {
+              print('⚠️ Failed to initialize notifications: $e');
+            }
+          });
     }
   }
 

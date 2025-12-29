@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:ha_mobile/presentation/widgets/wave_panel.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../core/session.dart';
+import '../../core/utils/device_registration.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/auth_storage.dart';
 import '../../data/services/olympic_season_service.dart';
@@ -78,12 +79,21 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       // Initialize push notifications after login
-      NotificationService.instance.initialize().catchError((e) {
-        if (kDebugMode) {
-          print('⚠️ Failed to initialize notifications: $e');
-        }
-        // Don't block login if this fails
-      });
+      NotificationService.instance
+          .initialize()
+          .then((_) {
+            // Register device after notification service is initialized
+            // Wait a bit for FCM token to be available
+            Future.delayed(const Duration(seconds: 2), () {
+              registerDeviceIfNeeded();
+            });
+          })
+          .catchError((e) {
+            if (kDebugMode) {
+              print('⚠️ Failed to initialize notifications: $e');
+            }
+            // Don't block login if this fails
+          });
 
       if (mounted) {
         // Navigate to home screen (RootShell)

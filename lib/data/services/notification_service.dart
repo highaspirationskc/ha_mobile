@@ -2,7 +2,7 @@
 import 'dart:io' show Platform;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
-import 'api_service.dart';
+import '../../core/utils/device_registration.dart';
 
 /// Top-level function for handling background messages
 /// This must be a top-level function (not a class method)
@@ -86,7 +86,7 @@ class NotificationService {
         if (kDebugMode) {
           print('🔄 FCM token refreshed: $newToken');
         }
-        // TODO: Send updated token to your backend
+        // Register device with new token
         _sendTokenToBackend(newToken);
       });
 
@@ -162,10 +162,8 @@ class NotificationService {
         print('✅ FCM token obtained: $_fcmToken');
       }
 
-      // Send token to backend
-      if (_fcmToken != null) {
-        await _sendTokenToBackend(_fcmToken!);
-      }
+      // Note: Device registration is handled separately after authentication
+      // via registerDeviceIfNeeded() called from login/auth_check screens
 
       return _fcmToken;
     } catch (e) {
@@ -192,10 +190,11 @@ class NotificationService {
   /// Send FCM token to backend
   Future<void> _sendTokenToBackend(String token) async {
     try {
-      await ApiService.instance.updateFCMToken(token);
+      // Register device with the new token
+      await registerDeviceIfNeeded();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error sending FCM token to backend: $e');
+        print('❌ Error registering device with FCM token: $e');
       }
     }
   }
