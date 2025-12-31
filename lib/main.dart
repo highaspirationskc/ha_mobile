@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -21,9 +20,6 @@ Future<void> main() async {
     // This MUST be called before runApp() for background messages to work
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
-
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
 
   final themeController = ThemeController();
   runApp(ThemeScope(controller: themeController, child: const HAApp()));

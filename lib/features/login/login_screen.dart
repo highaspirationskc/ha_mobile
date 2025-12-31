@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ha_mobile/presentation/widgets/wave_panel.dart';
 import '../../core/theme/brand_colors.dart';
@@ -31,11 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-populate credentials in debug/development mode
-    if (kDebugMode) {
-      _emailController.text = dotenv.env['DEV_EMAIL'] ?? '';
-      _passwordController.text = dotenv.env['DEV_PASSWORD'] ?? '';
-    }
   }
 
   @override
