@@ -1,6 +1,6 @@
 const String getOlympicSeasonQuery = r'''
-  query GetOlympicSeason($input: OlympicSeasonQueryInput) {
-    olympicSeason(input: $input) {
+  query GetOlympicSeason {
+    olympicSeason {
       id
       name
       startMonth

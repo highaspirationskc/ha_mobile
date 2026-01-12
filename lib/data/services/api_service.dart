@@ -1583,16 +1583,15 @@ class ApiService {
     try {
       final teams = await getTeams();
 
-      // For now, build mentee rankings from team mentees
-      // TODO: Replace with dedicated mentee leaderboard query when available
+      // Build mentee rankings from team mentees with their individual points
       final allMentees = <MenteeRanking>[];
       for (final team in teams) {
         for (final mentee in team.mentees) {
           allMentees.add(
             MenteeRanking(
               mentee: mentee,
-              points: 0, // Points per mentee not available in teams query
-              rank: 0,
+              points: mentee.points ?? 0, // Use points from teams query
+              rank: 0, // Will be set after sorting
               team: TeamSummary(
                 id: team.id,
                 name: team.name,
@@ -1603,6 +1602,12 @@ class ApiService {
             ),
           );
         }
+      }
+
+      // Sort mentees by points (descending) and assign ranks
+      allMentees.sort((a, b) => b.points.compareTo(a.points));
+      for (int i = 0; i < allMentees.length; i++) {
+        allMentees[i] = allMentees[i].copyWith(rank: i + 1);
       }
 
       return Leaderboard(
@@ -1861,22 +1866,15 @@ class ApiService {
   }
 
   /// Gets the current Olympic Season with all events
-  /// Defaults to current year if no year is provided
-  Future<OlympicSeason> getOlympicSeason({String? name, int? year}) async {
-    // Default to current year
-    final queryYear = year ?? DateTime.now().year;
-
+  Future<OlympicSeason> getOlympicSeason() async {
     if (kDebugMode) {
-      print('🏅 Fetching Olympic Season for year $queryYear...');
+      print('🏅 Fetching Olympic Season...');
     }
 
     try {
       final result = await _graphQLClient.client.query(
         QueryOptions(
           document: gql(getOlympicSeasonQuery),
-          variables: {
-            'input': {if (name != null) 'name': name, 'year': queryYear},
-          },
           fetchPolicy: FetchPolicy.networkOnly,
         ),
       );
@@ -1887,9 +1885,12 @@ class ApiService {
         print('   Has data: ${result.data != null}');
         if (result.hasException) {
           print('   Exception: ${result.exception}');
+          print('   GraphQL errors: ${result.exception?.graphqlErrors}');
+          print('   Link exception: ${result.exception?.linkException}');
         }
         if (result.data != null) {
           print('   Data keys: ${result.data?.keys}');
+          print('   Full response: ${result.data}');
         }
       }
 
@@ -1904,8 +1905,23 @@ class ApiService {
 
       // Parse events from the season
       final eventsData = seasonData['events'] as List<dynamic>? ?? [];
+      if (kDebugMode) {
+        print('📅 Found ${eventsData.length} events in season data');
+        if (eventsData.isNotEmpty) {
+          print('   First event: ${eventsData.first}');
+        }
+      }
+
       final events = eventsData.map((json) {
-        return Event.fromJson(json as Map<String, dynamic>);
+        try {
+          return Event.fromJson(json as Map<String, dynamic>);
+        } catch (e) {
+          if (kDebugMode) {
+            print('❌ Error parsing event: $e');
+            print('   Event JSON: $json');
+          }
+          rethrow;
+        }
       }).toList();
 
       // Sort events by date

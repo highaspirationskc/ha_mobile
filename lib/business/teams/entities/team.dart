@@ -103,11 +103,14 @@ class Team {
     final menteesData = json['mentees'] as List<dynamic>? ?? [];
     final mentees = menteesData.map((m) {
       final map = m as Map<String, dynamic>;
+      final menteeData = map['mentee'] as Map<String, dynamic>?;
+      final totalPoints = menteeData?['totalPoints'] as int? ?? 0;
       return UserRef(
         id: map['id'].toString(),
         firstName: map['firstName'] as String?,
         lastName: map['lastName'] as String?,
         image: map['avatarUrl'] as String?,
+        points: totalPoints,
       );
     }).toList();
 

@@ -7,6 +7,7 @@ class UserRef {
   final int? colorIndex; // 0..kProfileColors.length-1
   final String? phone;
   final String? email;
+  final int? points; // Optional points for mentees
 
   const UserRef({
     required this.id,
@@ -16,6 +17,7 @@ class UserRef {
     this.colorIndex,
     this.phone,
     this.email,
+    this.points,
   });
 
   String get displayName =>

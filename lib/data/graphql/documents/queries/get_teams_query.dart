@@ -20,6 +20,9 @@ const String getTeamsQuery = r'''
         firstName
         lastName
         avatarUrl
+        mentee {
+          totalPoints
+        }
       }
     }
   }
