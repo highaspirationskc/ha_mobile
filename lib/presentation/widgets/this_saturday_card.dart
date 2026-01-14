@@ -284,7 +284,9 @@ class _ThisSaturdayCardState extends State<ThisSaturdayCard> {
                       borderRadius: BorderRadius.circular(12),
                       child: AspectRatio(
                         aspectRatio: 0.85, // Slightly taller than wide
-                        child: _EventImage(src: e.imageUrl ?? ''),
+                        child: SizedBox.expand(
+                          child: _EventImage(src: e.imageUrl ?? ''),
+                        ),
                       ),
                     ),
                     // Status badge overlay (Registered or Arrived)
@@ -358,6 +360,8 @@ class _EventImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget placeholder() => Container(
+      width: double.infinity,
+      height: double.infinity,
       color: Colors.white.withOpacity(0.1),
       alignment: Alignment.center,
       child: Icon(Icons.image, color: Colors.white.withOpacity(0.5), size: 32),
@@ -366,17 +370,23 @@ class _EventImage extends StatelessWidget {
     if (src.trim().isEmpty) return placeholder();
 
     final isNetwork = src.startsWith('http');
-    return isNetwork
-        ? Image.network(
-            src,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => placeholder(),
-          )
-        : Image.asset(
-            src,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => placeholder(),
-          );
+    return SizedBox.expand(
+      child: isNetwork
+          ? Image.network(
+              src,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (_, __, ___) => placeholder(),
+            )
+          : Image.asset(
+              src,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (_, __, ___) => placeholder(),
+            ),
+    );
   }
 }
 

@@ -97,15 +97,16 @@ class OlympicSeasonService extends ChangeNotifier {
       now.month,
       now.day + daysUntilSaturday,
     );
+    final thisSaturdayYear = thisSaturday.year;
+    final thisSaturdayMonth = thisSaturday.month;
+    final thisSaturdayDay = thisSaturday.day;
 
     // Find events on this Saturday
+    // Compare year, month, day directly since dates are now in local timezone
     final saturdayEvents = _events.where((e) {
-      final eventDay = DateTime(
-        e.eventDate.year,
-        e.eventDate.month,
-        e.eventDate.day,
-      );
-      return eventDay.isAtSameMomentAs(thisSaturday);
+      return e.eventDate.year == thisSaturdayYear &&
+          e.eventDate.month == thisSaturdayMonth &&
+          e.eventDate.day == thisSaturdayDay;
     }).toList();
 
     if (saturdayEvents.isEmpty) return null;

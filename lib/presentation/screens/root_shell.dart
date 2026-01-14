@@ -591,7 +591,26 @@ class _RootShellState extends State<RootShell> {
                                   .where((k) => tabs.any((t) => t.key == k))
                                   .elementAt(_stackIndex)
                                   .currentState;
-                          currentNavigator?.pushNamed(
+
+                          if (currentNavigator == null) return;
+
+                          // Check if we're already on notifications or message screen
+                          if (currentRoute == AppRoutes.notificationsRoot) {
+                            // Already on notifications screen, do nothing
+                            return;
+                          } else if (currentRoute ==
+                              AppRoutes.notificationMessage) {
+                            // On message screen, pop back to notifications
+                            currentNavigator.popUntil((route) {
+                              return route.settings.name ==
+                                      AppRoutes.notificationsRoot ||
+                                  route.isFirst;
+                            });
+                            return;
+                          }
+
+                          // Otherwise, navigate to notifications
+                          currentNavigator.pushNamed(
                             AppRoutes.notificationsRoot,
                           );
                         },

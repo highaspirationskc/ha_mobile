@@ -33,11 +33,16 @@ class Event {
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
+    // Parse eventDate and convert from UTC to local timezone
+    // DateTime.parse() on UTC strings (ending with 'Z') creates UTC DateTime
+    final eventDateUtc = DateTime.parse(json['eventDate'] as String);
+    final eventDateLocal = eventDateUtc.toLocal();
+    
     return Event(
       id: json['id'].toString(),
       name: json['name'] as String,
       description: json['description'] as String?,
-      eventDate: DateTime.parse(json['eventDate'] as String),
+      eventDate: eventDateLocal,
       location: json['location'] as String?,
       imageUrl: json['imageUrl'] as String?,
       eventType: EventType.fromJson(json['eventType'] as Map<String, dynamic>),
