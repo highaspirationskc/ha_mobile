@@ -13,14 +13,6 @@ const String getInboxQuery = r'''
       support
       createdAt
       updatedAt
-      author {
-        id
-        firstName
-        lastName
-        email
-        avatarUrl
-        role
-      }
       recipients {
         id
         firstName
@@ -39,12 +31,6 @@ const String getInboxQuery = r'''
         message
         isRead
         createdAt
-        author {
-          id
-          firstName
-          lastName
-          avatarUrl
-        }
       }
     }
   }

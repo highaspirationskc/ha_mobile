@@ -5,6 +5,7 @@ import 'this_saturday_section.dart';
 import 'saturday_scoop_section.dart';
 import 'add_section.dart';
 import 'mentee_section.dart';
+import 'rewards_section.dart';
 import 'upcoming_events.dart';
 import 'past_scoops_section.dart';
 
@@ -46,6 +47,10 @@ class HomeScreen extends StatelessWidget {
             else if (isMentee)
               const AddSection(),
             if (isMentor || isMentee) const SizedBox(height: 24),
+
+            // ----- Rewards -----
+            const RewardsSection(),
+            const SizedBox(height: 24),
 
             // ----- Upcoming Events -----
             const UpcomingEventsSection(),

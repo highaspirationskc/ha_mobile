@@ -9,10 +9,12 @@ import '../../core/utils/phone_formatter.dart';
 import '../../business/user/entities/user.dart';
 import '../../business/user/entities/user_refs.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/rewards_service.dart';
 import '../../presentation/widgets/avatar.dart';
 import '../../presentation/widgets/message_bottom_sheet.dart';
 import 'widgets/community_service_button.dart';
 import 'widgets/grade_cards_tile.dart';
+import 'widgets/redeemed_rewards_tile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -27,7 +29,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _totalCommunityServiceEvents = 0;
   // TODO: Re-enable when attendance is ready
   // int _totalAttendance = 0;
-  int _totalPoints = 0;
   int _totalGradeCards = 0;
   UserRef? _mentor;
   List<UserRef> _guardians = [];
@@ -36,6 +37,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    RewardsService.instance.fetchRewards();
+    RewardsService.instance.addListener(_onRewardsChange);
     // Listen to API service changes to update hours when new entries are added
     ApiService.instance.changes.addListener(_onApiChanges);
   }
@@ -43,12 +46,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     ApiService.instance.changes.removeListener(_onApiChanges);
+    RewardsService.instance.removeListener(_onRewardsChange);
     super.dispose();
   }
 
-  void _onApiChanges() {
-    _loadUserData();
-  }
+  void _onApiChanges() => _loadUserData();
+
+  void _onRewardsChange() => setState(() {});
 
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
@@ -63,9 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final services = await ApiService.instance.getCommunityServices(
         userId: currentUserId,
       );
-      final attendance = await ApiService.instance.getTotalAttendance(
-        userId: currentUserId,
-      );
+      await ApiService.instance.getTotalAttendance(userId: currentUserId);
       final gradeCardCount = await ApiService.instance.getGradeCardCount(
         userId: currentUserId,
       );
@@ -80,9 +82,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // TODO: Re-enable when attendance is ready
           // _totalAttendance = attendance;
           _totalGradeCards = gradeCardCount;
-          _totalPoints =
-              attendance +
-              services.length; // Points = attendance + community service events
           _isLoading = false;
         });
       }
@@ -160,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (currentUserKind.value == CurrentUserKind.mentee) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '$_totalPoints pts',
+                  '${RewardsService.instance.totalPoints} pts',
                   style: t.titleLarge?.copyWith(
                     color: cs.primary,
                     fontWeight: FontWeight.w600,
@@ -285,6 +284,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: cs.outlineVariant.withOpacity(0.3),
                     ),
                     GradeCardsTile(totalCards: _totalGradeCards),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 72,
+                      color: cs.outlineVariant.withOpacity(0.3),
+                    ),
+                    RedeemedRewardsTile(
+                      count: RewardsService.instance.redeemed.length,
+                    ),
                     Divider(
                       height: 1,
                       thickness: 1,

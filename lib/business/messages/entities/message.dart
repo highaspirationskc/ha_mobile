@@ -5,7 +5,7 @@ class Message {
   final String id;
   final String subject;
   final String message;
-  final User author;
+  final User? author;
   final List<User> recipients;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -22,7 +22,7 @@ class Message {
     required this.id,
     required this.subject,
     required this.message,
-    required this.author,
+    this.author,
     this.recipients = const [],
     required this.createdAt,
     this.updatedAt,
@@ -40,7 +40,9 @@ class Message {
       id: json['id'].toString(),
       subject: json['subject'] as String? ?? '',
       message: json['message'] as String? ?? '',
-      author: User.fromJson(json['author'] as Map<String, dynamic>),
+      author: json['author'] != null
+          ? User.fromJson(json['author'] as Map<String, dynamic>)
+          : null,
       recipients:
           (json['recipients'] as List<dynamic>?)
               ?.map((r) => User.fromJson(r as Map<String, dynamic>))
@@ -69,7 +71,7 @@ class Message {
       'id': id,
       'subject': subject,
       'message': message,
-      'author': author.toJson(),
+      'author': author?.toJson(),
       'recipients': recipients.map((r) => r.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -87,7 +89,7 @@ class Message {
     String? id,
     String? subject,
     String? message,
-    User? author,
+    User? Function()? author,
     List<User>? recipients,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -103,7 +105,7 @@ class Message {
       id: id ?? this.id,
       subject: subject ?? this.subject,
       message: message ?? this.message,
-      author: author ?? this.author,
+      author: author != null ? author() : this.author,
       recipients: recipients ?? this.recipients,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -135,6 +137,6 @@ class Message {
 
   @override
   String toString() {
-    return 'Message(id: $id, subject: $subject, isReply: $isReply, author: ${author.firstName})';
+    return 'Message(id: $id, subject: $subject, isReply: $isReply, author: ${author?.firstName})';
   }
 }

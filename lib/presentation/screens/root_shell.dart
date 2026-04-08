@@ -22,6 +22,9 @@ import 'scoop_detail_screen.dart';
 import 'past_scoops_screen.dart';
 import 'check_in_scanner.dart';
 import '../../features/mentees/mentees_list_screen.dart';
+import '../../features/rewards/rewards_screen.dart';
+import 'reward_screen.dart';
+import 'redeemed_rewards_screen.dart';
 import '../../features/profile/community_service_screen.dart';
 import '../../features/profile/account_settings_screen.dart';
 import '../../features/contact_support/contact_support_screen.dart';
@@ -31,6 +34,7 @@ import 'team_screen.dart';
 
 // Entities
 import '../../business/events/entities/event.dart';
+import '../../business/rewards/entities/reward.dart';
 import '../../business/scoops/entities/scoop.dart';
 
 // Mock data
@@ -122,9 +126,8 @@ class _RootShellState extends State<RootShell> {
     _loadUnreadCount();
   }
 
-  Future<void> _loadUnreadCount() async {
-    // Fetch inbox if not cached, then get unread count
-    await ApiService.instance.getInbox();
+  Future<void> _loadUnreadCount({bool forceRefresh = false}) async {
+    await ApiService.instance.getInbox(forceRefresh: forceRefresh);
     if (mounted) {
       setState(() {
         _unreadCount = ApiService.instance.getUnreadCount();
@@ -150,6 +153,10 @@ class _RootShellState extends State<RootShell> {
 
   late final _homeObs = _TabObserver((r, _) {
     _homeRoute = r?.settings.name ?? AppRoutes.homeRoot;
+    // Refresh notification count whenever the user lands back on home
+    if (_homeRoute == AppRoutes.homeRoot) {
+      _loadUnreadCount(forceRefresh: true);
+    }
     _deferRebuild();
   });
   late final _menteesObs = _TabObserver((r, _) {
@@ -208,6 +215,17 @@ class _RootShellState extends State<RootShell> {
             builder: (_) => CheckInScannerScreen(mockEventId: eventId),
             settings: const RouteSettings(name: AppRoutes.checkInScanner),
           );
+        case AppRoutes.rewards:
+          return MaterialPageRoute(
+            builder: (_) => const RewardsScreen(),
+            settings: const RouteSettings(name: AppRoutes.rewards),
+          );
+        case AppRoutes.rewardDetail:
+          final reward = settings.arguments as Reward;
+          return MaterialPageRoute(
+            builder: (_) => RewardScreen(reward: reward),
+            settings: const RouteSettings(name: AppRoutes.rewardDetail),
+          );
         case AppRoutes.notificationsRoot:
           return MaterialPageRoute(
             builder: (_) => const NotificationsScreen(),
@@ -232,6 +250,8 @@ class _RootShellState extends State<RootShell> {
       AppRoutes.scoopDetail => 'Saturday Scoop',
       AppRoutes.pastScoops => 'Past Scoops',
       AppRoutes.checkInScanner => '', // hide app bar; shell will handle
+      AppRoutes.rewards => 'Rewards',
+      AppRoutes.rewardDetail => 'Reward',
       AppRoutes.notificationsRoot => 'Notifications',
       AppRoutes.notificationMessage => 'Message',
       _ => 'Hello ${(_currentUser ?? currentUser).firstName ?? 'there'}',
@@ -359,6 +379,11 @@ class _RootShellState extends State<RootShell> {
               ),
               settings: const RouteSettings(name: AppRoutes.gradeCards),
             );
+          case AppRoutes.redeemHistory:
+            return MaterialPageRoute(
+              builder: (_) => const RedeemedRewardsScreen(),
+              settings: const RouteSettings(name: AppRoutes.redeemHistory),
+            );
           case AppRoutes.accountSettings:
             return MaterialPageRoute(
               builder: (_) => const AccountSettingsScreen(),
@@ -403,6 +428,7 @@ class _RootShellState extends State<RootShell> {
       titleForRoute: (name) => switch (name) {
         AppRoutes.communityService => 'Community Service',
         AppRoutes.gradeCards => 'Grade Cards',
+        AppRoutes.redeemHistory => 'Redeemed Rewards',
         AppRoutes.accountSettings => 'Account Settings',
         AppRoutes.contactSupport => 'Contact Support',
         AppRoutes.pulses => 'Pulses',
@@ -639,6 +665,10 @@ class _RootShellState extends State<RootShell> {
                     onChanged: (tapped) {
                       if (_stackIndex != tapped) {
                         setState(() => _stackIndex = tapped);
+                        // Refresh notification count when switching back to home tab
+                        if (tapped == 0) {
+                          _loadUnreadCount(forceRefresh: true);
+                        }
                       }
                     },
                     tabs: navItems,

@@ -18,10 +18,10 @@ class ListTileMessage extends StatelessWidget {
     final t = Theme.of(context).textTheme;
 
     final author = message.author;
-    final authorName = _fullName(author);
-    final showMentorChip = _isMentor(author);
-    final showGuardianChip = _isGuardian(author);
-    final showStaffChip = _isStaffOrAdmin(author);
+    final authorName = author != null ? _fullName(author) : 'High Aspirations';
+    final showMentorChip = author != null && _isMentor(author);
+    final showGuardianChip = author != null && _isGuardian(author);
+    final showStaffChip = author != null && _isStaffOrAdmin(author);
     final rel = _relativeTime(message.updatedAt ?? message.createdAt);
     final isRead = message.isRead;
 
@@ -36,20 +36,19 @@ class ListTileMessage extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar (36x36) with same look as mini avatars
               SizedBox(
                 width: 36,
                 height: 36,
-                child: _AuthorAvatar(user: author),
+                child: author != null
+                    ? _AuthorAvatar(user: author)
+                    : _SystemAvatar(),
               ),
               const SizedBox(width: 10),
 
-              // Text block
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top row: name + optional mentor chip, trailing time
                     Row(
                       children: [
                         Flexible(
@@ -105,7 +104,6 @@ class ListTileMessage extends StatelessWidget {
 
                     const SizedBox(height: 4),
 
-                    // Subject (bold, single line)
                     Text(
                       message.subject,
                       maxLines: 1,
@@ -115,7 +113,6 @@ class ListTileMessage extends StatelessWidget {
                       ),
                     ),
 
-                    // Snippet (muted, single line)
                     Text(
                       message.message,
                       maxLines: 1,
@@ -141,21 +138,15 @@ class ListTileMessage extends StatelessWidget {
     return both.isEmpty ? (u.email ?? '') : both;
   }
 
-  /// Show the "mentor" chip if the author is a mentor
-  bool _isMentor(User author) {
-    return author.roles.contains(UserRole.mentor);
-  }
+  bool _isMentor(User author) =>
+      author.roles.contains(UserRole.mentor);
 
-  /// Show the "guardian" chip if the author is a parent/guardian
-  bool _isGuardian(User author) {
-    return author.roles.contains(UserRole.parent);
-  }
+  bool _isGuardian(User author) =>
+      author.roles.contains(UserRole.parent);
 
-  /// Show the "staff" chip if the author is staff or admin
-  bool _isStaffOrAdmin(User author) {
-    return author.roles.contains(UserRole.staff) ||
-        author.roles.contains(UserRole.admin);
-  }
+  bool _isStaffOrAdmin(User author) =>
+      author.roles.contains(UserRole.staff) ||
+      author.roles.contains(UserRole.admin);
 
   String _relativeTime(DateTime when) {
     final now = DateTime.now();
@@ -174,6 +165,28 @@ class ListTileMessage extends StatelessWidget {
   }
 }
 
+/// Fallback avatar for system/automated messages with no author.
+class _SystemAvatar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        color: kHAPrimary,
+        alignment: Alignment.center,
+        child: const Text(
+          'HA',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AuthorAvatar extends StatelessWidget {
   final User user;
   const _AuthorAvatar({required this.user});
@@ -181,8 +194,6 @@ class _AuthorAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final img = user.image ?? '';
-    // Use your AvatarMini look with a slightly larger size (36).
-    // If AvatarMini doesn't support size, do a local CircleAvatar fallback.
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: Stack(
@@ -199,7 +210,6 @@ class _AuthorAvatar extends StatelessWidget {
           else
             _fallbackInitials(context),
 
-          // white border 2px like your mini avatars
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(

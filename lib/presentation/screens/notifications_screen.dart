@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/routes.dart';
 import '../../data/services/api_service.dart';
@@ -103,64 +104,65 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
     }
 
-    if (_messages.isEmpty) {
-      return Container(
-        color: cs.surface,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.inbox_outlined,
-                size: 64,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No messages yet',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Group messages by time period
     final groupedMessages = _groupMessagesByTime(_messages);
 
     return Container(
       color: cs.surface,
-      child: Column(
-        children: [
-          // Notifications header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            child: Text(
-              'Notifications',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        slivers: [
+          CupertinoSliverRefreshControl(
+            onRefresh: () => _loadMessages(forceRefresh: true),
+            builder: (context, mode, pulledExtent, triggerDistance, indicatorExtent) {
+              final opacity = (pulledExtent / triggerDistance).clamp(0.0, 1.0);
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Opacity(
+                    opacity: opacity,
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          if (_messages.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 64, color: cs.onSurfaceVariant),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No messages yet',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildItem(context, index, groupedMessages),
+                  childCount: _getTotalItemCount(groupedMessages),
+                ),
               ),
             ),
-          ),
-          // Messages list with pull-to-refresh
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => _loadMessages(forceRefresh: true),
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _getTotalItemCount(groupedMessages),
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  return _buildItem(context, index, groupedMessages);
-                },
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -250,7 +252,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _buildSectionHeader(BuildContext context, String title) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      padding: const EdgeInsets.only(left: 16, top: 8, bottom: 4),
       child: Text(
         title,
         style: theme.textTheme.titleSmall?.copyWith(

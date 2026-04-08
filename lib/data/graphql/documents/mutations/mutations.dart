@@ -10,3 +10,4 @@ export 'delete_grade_card_mutation.dart';
 export 'archive_message_mutation.dart';
 export 'reset_password_mutation.dart';
 export 'register_device_mutation.dart';
+export 'create_redemption_mutation.dart';

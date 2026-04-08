@@ -13,14 +13,6 @@ const String getMessageThreadQuery = r'''
       support
       createdAt
       updatedAt
-      author {
-        id
-        firstName
-        lastName
-        email
-        avatarUrl
-        role
-      }
       recipients {
         id
         firstName
@@ -35,13 +27,6 @@ const String getMessageThreadQuery = r'''
         isRead
         isReply
         createdAt
-        author {
-          id
-          firstName
-          lastName
-          avatarUrl
-          role
-        }
       }
       parent {
         id

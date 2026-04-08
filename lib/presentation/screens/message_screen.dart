@@ -197,10 +197,11 @@ class _MessageScreenState extends State<MessageScreen> {
     bool showArchive = false,
   }) {
     final author = message.author;
-    final authorName = _getAuthorName(author);
-    final showMentorChip = _isMentor(author);
-    final showGuardianChip = _isGuardian(author);
-    final showStaffChip = _isStaffOrAdmin(author);
+    final authorName =
+        author != null ? _getAuthorName(author) : 'High Aspirations';
+    final showMentorChip = author != null && _isMentor(author);
+    final showGuardianChip = author != null && _isGuardian(author);
+    final showStaffChip = author != null && _isStaffOrAdmin(author);
     final relativeTime = _getRelativeTime(
       message.updatedAt ?? message.createdAt,
     );
@@ -209,7 +210,13 @@ class _MessageScreenState extends State<MessageScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Author avatar
-        SizedBox(width: 40, height: 40, child: _AuthorAvatar(user: author)),
+        SizedBox(
+          width: 40,
+          height: 40,
+          child: author != null
+              ? _AuthorAvatar(user: author)
+              : _SystemAvatar(),
+        ),
 
         const SizedBox(width: 12),
 
@@ -381,6 +388,27 @@ class _MessageScreenState extends State<MessageScreen> {
         );
       }
     }
+  }
+}
+
+class _SystemAvatar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        color: const Color(0xFF1F2555), // kHAPrimary
+        alignment: Alignment.center,
+        child: const Text(
+          'HA',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
   }
 }
 

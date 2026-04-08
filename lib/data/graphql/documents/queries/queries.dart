@@ -12,3 +12,4 @@ export 'get_saturday_scoops_query.dart';
 export 'get_teams_query.dart';
 export 'get_message_thread_query.dart';
 export 'get_mentee_grade_cards_query.dart';
+export 'get_rewards_query.dart';

@@ -19,6 +19,7 @@ import '../../business/teams/entities/team.dart';
 import '../../business/olympic_season/entities/olympic_season.dart';
 import '../../business/events/entities/event.dart';
 import '../../business/messages/entities/message.dart';
+import '../../business/rewards/entities/rewards_data.dart';
 import '../../business/scoops/entities/scoop.dart';
 import '../mock/mock_leaderboard.dart';
 import '../graphql/graphql_client.dart';
@@ -31,7 +32,7 @@ import '../graphql/documents/mutations/create_grade_card_mutation.dart';
 import '../graphql/documents/mutations/delete_grade_card_mutation.dart';
 import '../graphql/documents/mutations/archive_message_mutation.dart';
 import '../graphql/documents/mutations/mutations.dart'
-    show registerDeviceMutation;
+    show registerDeviceMutation, createRedemptionMutation;
 import 'olympic_season_service.dart';
 
 /// Response class for getCurrentUser that includes user, optional mentor, guardians, and children
@@ -99,6 +100,8 @@ class ApiService {
     _scoopsLastFetched = null;
     _cachedTeams = null;
     _teamsLastFetched = null;
+    _cachedRewards = null;
+    _rewardsLastFetched = null;
     changes.value++; // notify listeners
   }
 
@@ -1112,6 +1115,105 @@ class ApiService {
     _scoopsLastFetched = null;
   }
 
+  // ── Rewards ────────────────────────────────────────────────────────────────
+
+  Future<RewardsData> getRewards({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _cachedRewards != null &&
+        _rewardsLastFetched != null &&
+        DateTime.now().difference(_rewardsLastFetched!).inMinutes < 5) {
+      return _cachedRewards!;
+    }
+
+    if (kDebugMode) {
+      print('🎁 API: Fetching rewards...');
+    }
+
+    try {
+      final result = await _graphQLClient.client.query(
+        QueryOptions(
+          document: gql(getRewardsQuery),
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error fetching rewards: ${result.exception}');
+        }
+        if (_cachedRewards != null) return _cachedRewards!;
+        throw Exception('Failed to fetch rewards: ${result.exception}');
+      }
+
+      final data = result.data?['rewards'] as Map<String, dynamic>?;
+      if (data == null) throw Exception('No rewards data in response');
+
+      final rewardsData = RewardsData.fromJson(data);
+
+      _cachedRewards = rewardsData;
+      _rewardsLastFetched = DateTime.now();
+
+      if (kDebugMode) {
+        print(
+          '✅ API: Fetched ${rewardsData.individualIncentives.length} individual '
+          'and ${rewardsData.teamIncentives.length} team incentives, '
+          '${rewardsData.totalPoints} pts',
+        );
+      }
+
+      return rewardsData;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception fetching rewards: $e');
+      }
+      if (_cachedRewards != null) return _cachedRewards!;
+      rethrow;
+    }
+  }
+
+  Future<void> createRedemption({required String incentiveId}) async {
+    if (kDebugMode) {
+      print('🎁 API: Redeeming incentive: $incentiveId');
+    }
+
+    try {
+      final result = await _graphQLClient.client.mutate(
+        MutationOptions(
+          document: gql(createRedemptionMutation),
+          variables: {'incentiveId': incentiveId},
+        ),
+      );
+
+      if (result.hasException) {
+        if (kDebugMode) {
+          print('❌ API: GraphQL error redeeming incentive: ${result.exception}');
+        }
+        throw Exception('Failed to redeem: ${result.exception}');
+      }
+
+      final payload =
+          result.data?['createRedemption'] as Map<String, dynamic>?;
+      final errors = payload?['errors'] as List<dynamic>?;
+
+      if (errors != null && errors.isNotEmpty) {
+        throw Exception(errors.join(', '));
+      }
+
+      // Bust the rewards cache so the next fetch gets fresh points
+      _cachedRewards = null;
+      _rewardsLastFetched = null;
+
+      if (kDebugMode) {
+        print('✅ API: Incentive redeemed successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ API: Exception redeeming incentive: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Gets mentee data for a user including guardians and mentor
   Future<MenteeData?> getMenteeData({required String userId}) async {
     if (kDebugMode) {
@@ -1506,6 +1608,9 @@ class ApiService {
   /// Cache for teams data
   List<Team>? _cachedTeams;
   DateTime? _teamsLastFetched;
+
+  RewardsData? _cachedRewards;
+  DateTime? _rewardsLastFetched;
 
   /// Gets all teams from the API
   Future<List<Team>> getTeams({bool forceRefresh = false}) async {

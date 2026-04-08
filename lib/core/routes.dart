@@ -18,4 +18,7 @@ class AppRoutes {
   static const accountSettings = '/account-settings';
   static const forgotPassword = '/forgot-password';
   static const contactSupport = '/contact-support';
+  static const rewards = '/rewards';
+  static const rewardDetail = '/reward-detail';
+  static const redeemHistory = '/redeem-history';
 }
