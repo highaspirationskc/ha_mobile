@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../business/rewards/entities/redemption.dart';
 import '../../core/routes.dart';
@@ -135,8 +134,8 @@ class _RedeemedTile extends StatelessWidget {
 
   String _formatDate(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
   }
@@ -168,7 +167,7 @@ class _RedeemedTile extends StatelessWidget {
             ),
             const SizedBox(width: 16),
 
-            // Name + date
+            // Name + points | date
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,7 +181,7 @@ class _RedeemedTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _formatDate(redemption.createdAt),
+                    '${redemption.pointsSpent}pts | ${_formatDate(redemption.createdAt)}',
                     style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
@@ -190,40 +189,13 @@ class _RedeemedTile extends StatelessWidget {
             ),
             const SizedBox(width: 12),
 
-            // Points spent + status
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
-                  children: [
-                    SvgPicture.asset(
-                      'assets/icons/points_icon.svg',
-                      width: 14,
-                      height: 14,
-                      colorFilter: ColorFilter.mode(
-                        cs.primary,
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${redemption.pointsSpent}',
-                      style: t.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: cs.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatStatus(redemption.status),
-                  style: t.bodySmall?.copyWith(
-                    color: _statusColor(redemption.status, cs),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+            // Status badge
+            Text(
+              _formatStatus(redemption.status),
+              style: t.bodySmall?.copyWith(
+                color: _statusColor(redemption.status, cs),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
